@@ -1,0 +1,137 @@
+import {
+  RDSDataClient,
+  ExecuteStatementCommand,
+  BeginTransactionCommand,
+  CommitTransactionCommand,
+  RollbackTransactionCommand,
+  type Field,
+  type SqlParameter,
+} from "@aws-sdk/client-rds-data";
+
+const region = process.env.AWS_REGION;
+const resourceArn = process.env.DB_CLUSTER_ARN;
+const secretArn = process.env.DB_SECRET_ARN;
+const database = process.env.DB_NAME ?? "ownova";
+
+/** True when the Aurora Serverless v2 cluster (via RDS Data API) is configured. */
+export const isAwsDbConfigured = Boolean(region && resourceArn && secretArn);
+
+let client: RDSDataClient | null = null;
+function getClient() {
+  if (!isAwsDbConfigured) {
+    throw new Error(
+      "Aurora is not configured. Set AWS_REGION, DB_CLUSTER_ARN, DB_SECRET_ARN in .env.local, " +
+        "or keep using mock data from src/lib/mock-data.ts."
+    );
+  }
+  client ??= new RDSDataClient({ region });
+  return client;
+}
+
+// ---- value <-> Data API Field conversion -------------------------------------------------
+
+export type SqlParams = Record<string, string | number | boolean | null | Date | undefined>;
+
+function toSqlParameters(params?: SqlParams): SqlParameter[] | undefined {
+  if (!params) return undefined;
+  return Object.entries(params).map(([name, value]) => {
+    if (value === null || value === undefined) return { name, value: { isNull: true } };
+    if (typeof value === "boolean") return { name, value: { booleanValue: value } };
+    if (typeof value === "number") {
+      return Number.isInteger(value)
+        ? { name, value: { longValue: value } }
+        : { name, value: { doubleValue: value } };
+    }
+    if (value instanceof Date) return { name, value: { stringValue: value.toISOString() } };
+    return { name, value: { stringValue: value } };
+  });
+}
+
+function fieldToJs(field: Field): unknown {
+  if (field.isNull) return null;
+  if (field.stringValue !== undefined) return field.stringValue;
+  if (field.longValue !== undefined) return field.longValue;
+  if (field.doubleValue !== undefined) return field.doubleValue;
+  if (field.booleanValue !== undefined) return field.booleanValue;
+  if (field.arrayValue) return field.arrayValue;
+  return null;
+}
+
+function rowsToObjects(records: Field[][] | undefined, columnNames: string[]): Record<string, unknown>[] {
+  if (!records) return [];
+  return records.map((row) => {
+    const obj: Record<string, unknown> = {};
+    row.forEach((field, i) => {
+      obj[columnNames[i]] = fieldToJs(field);
+    });
+    return obj;
+  });
+}
+
+// ---- public API ----------------------------------------------------------------------------
+
+/**
+ * Run one SQL statement outside a transaction. Use for simple reads/writes that don't need
+ * the app.current_user_id / app.current_role session variables set (see withUserContext).
+ */
+export async function query<T = Record<string, unknown>>(sql: string, params?: SqlParams): Promise<T[]> {
+  const res = await getClient().send(
+    new ExecuteStatementCommand({
+      resourceArn,
+      secretArn,
+      database,
+      sql,
+      parameters: toSqlParameters(params),
+      includeResultMetadata: true,
+    })
+  );
+  const columnNames = (res.columnMetadata ?? []).map((c) => c.name ?? "");
+  return rowsToObjects(res.records, columnNames) as T[];
+}
+
+interface UserContext {
+  userId: string;
+  role: string;
+}
+
+/**
+ * Runs `fn` inside a transaction with `app.current_user_id` / `app.current_role` set via
+ * SET LOCAL equivalents (set_config(..., true) is transaction-scoped), so the RLS policies
+ * in db/migrations/0001_init.sql can see who's calling. This is the AWS replacement for
+ * Supabase's per-connection auth.uid(). ALWAYS call queries that touch RLS-protected tables
+ * through this helper rather than the bare `query()` above.
+ */
+export async function withUserContext<T>(
+  ctx: UserContext,
+  fn: (run: (sql: string, params?: SqlParams) => Promise<Record<string, unknown>[]>) => Promise<T>
+): Promise<T> {
+  const c = getClient();
+  const { transactionId } = await c.send(new BeginTransactionCommand({ resourceArn, secretArn, database }));
+
+  const run = async (sql: string, params?: SqlParams) => {
+    const res = await c.send(
+      new ExecuteStatementCommand({
+        resourceArn,
+        secretArn,
+        database,
+        sql,
+        parameters: toSqlParameters(params),
+        transactionId,
+        includeResultMetadata: true,
+      })
+    );
+    const columnNames = (res.columnMetadata ?? []).map((col) => col.name ?? "");
+    return rowsToObjects(res.records, columnNames);
+  };
+
+  try {
+    await run("select set_config('app.current_user_id', :uid, true)", { uid: ctx.userId });
+    await run("select set_config('app.current_role', :role, true)", { role: ctx.role });
+    const result = await fn(run);
+    await c.send(new CommitTransactionCommand({ resourceArn, secretArn, transactionId }));
+    return result;
+  } catch (err) {
+    await c.send(new RollbackTransactionCommand({ resourceArn, secretArn, transactionId })).catch(() => {});
+    throw err;
+  }
+}

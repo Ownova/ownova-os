@@ -1,0 +1,4 @@
+-- DEPRECATED — Ownova OS moved from Supabase to AWS (Aurora Serverless v2 + Cognito + S3).
+-- This file is superseded by db/migrations/0001_init.sql and is only left here because this
+-- sandbox could not delete it from the OneDrive-synced folder. Please delete this entire
+-- `supabase/` directory yourself (Windows Explorer, not code) — see README.md.
