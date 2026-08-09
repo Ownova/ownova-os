@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { requireInternalPage } from "@/lib/auth-guard";
 import { SettingsForm } from "@/components/settings/settings-form";
-import { getSettings } from "@/app/actions/settings";
+import { getSettings } from "@/lib/data/settings";
+import type { SettingsMap } from "@/lib/settings-keys";
 
 const roles = [
   { role: "Admin", access: "Full system access, including API keys and billing" },
@@ -22,7 +23,9 @@ const roles = [
 
 export default async function SettingsPage() {
   const session = await requireInternalPage();
-  const settings = await getSettings().catch(() => ({}));
+  // The empty fallback is annotated because an untyped `{}` widens the union and erases the
+  // known setting keys, so every `settings.x` lookup below fails to type-check.
+  const settings: SettingsMap = await getSettings().catch(() => ({}) as SettingsMap);
   const canEdit = ["admin", "ceo"].includes(session.role);
 
   return (

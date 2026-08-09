@@ -4,7 +4,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { describeActionError } from "@/lib/action-error";
-import { saveSettingsAction, type SettingsMap } from "@/app/actions/settings";
+import { saveSettingsAction } from "@/app/actions/settings";
+import type { SettingsMap } from "@/lib/settings-keys";
 
 /**
  * Wraps a group of settings inputs and actually persists them. Reads values straight off the
