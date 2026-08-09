@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { ProjectsKanban } from "@/components/projects/kanban-board";
+import { getProjects } from "@/lib/data/projects";
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
+  const projects = await getProjects();
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -14,7 +16,7 @@ export default function ProjectsPage() {
           <Plus className="h-4 w-4" /> New Project
         </Button>
       </div>
-      <ProjectsKanban />
+      <ProjectsKanban projects={projects} />
     </div>
   );
 }

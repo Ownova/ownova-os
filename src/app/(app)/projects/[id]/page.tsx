@@ -4,16 +4,16 @@ import { ArrowLeft } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TaskBoard } from "@/components/projects/task-board";
-import { projects, projectTasks, teamMembers } from "@/lib/mock-data";
 import { formatCurrency, formatDate, initials } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getProjectById, getProjectTasks } from "@/lib/data/projects";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const project = projects.find((p) => p.id === id);
+  const project = await getProjectById(id);
   if (!project) return notFound();
 
-  const tasks = projectTasks.filter((t) => t.projectId === project.id);
+  const tasks = await getProjectTasks(project.id);
 
   return (
     <div className="space-y-6">
@@ -53,17 +53,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <CardContent className="space-y-4 pt-0">
           <p className="text-sm text-muted-foreground">{project.description}</p>
           <div className="flex items-center gap-2">
-            {project.team.map((name) => {
-              const member = teamMembers.find((m) => m.name === name);
-              return (
-                <div key={name} className="flex items-center gap-2 rounded-full border border-border py-1 pl-1 pr-3 text-xs">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
-                  </Avatar>
-                  {member?.name ?? name}
-                </div>
-              );
-            })}
+            {project.team.map((name) => (
+              <div key={name} className="flex items-center gap-2 rounded-full border border-border py-1 pl-1 pr-3 text-xs">
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
+                </Avatar>
+                {name}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

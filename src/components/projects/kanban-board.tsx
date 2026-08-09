@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { projects } from "@/lib/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { ProjectStatus } from "@/types";
+import type { Project, ProjectStatus } from "@/types";
 
 const columns: { key: ProjectStatus; label: string }[] = [
   { key: "planning", label: "Planning" },
@@ -12,7 +11,7 @@ const columns: { key: ProjectStatus; label: string }[] = [
   { key: "completed", label: "Completed" },
 ];
 
-export function ProjectsKanban() {
+export function ProjectsKanban({ projects }: { projects: Project[] }) {
   return (
     <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
       {columns.map((col) => {
