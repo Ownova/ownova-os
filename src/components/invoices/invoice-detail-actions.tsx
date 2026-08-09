@@ -1,18 +1,38 @@
 "use client";
 
+import { useTransition } from "react";
 import { FileDown, Send } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { toastActionError } from "@/lib/action-toast";
+import { sendInvoiceEmailAction } from "@/app/actions/invoices";
 
 /**
- * "Export PDF" downloads a real server-generated PDF from /api/invoices/[id]/pdf (previously this
- * called window.print(), which produced a screenshot of the page rather than a document).
+ * "Export PDF" downloads a real server-generated PDF from /api/invoices/[id]/pdf.
  *
- * "Send to Client" is deliberately honest about not being wired up: it used to show a success
- * toast claiming the invoice had been emailed, which was untrue -- no mail transport is
- * configured. It now says so plainly instead.
+ * "Send to Client" now genuinely emails the invoice with the PDF attached, via SES. It previously
+ * showed a success toast without sending anything.
  */
-export function InvoiceDetailActions({ invoiceId, invoiceNumber }: { invoiceId: string; invoiceNumber: string }) {
+export function InvoiceDetailActions({
+  invoiceId,
+  invoiceNumber,
+}: {
+  invoiceId: string;
+  invoiceNumber: string;
+}) {
+  const [isSending, startSending] = useTransition();
+
+  function sendToClient() {
+    startSending(async () => {
+      try {
+        const { sentTo } = await sendInvoiceEmailAction(invoiceId);
+        toast.success(`${invoiceNumber} sent to ${sentTo}`);
+      } catch (error) {
+        toastActionError(error, "Could not send this invoice.");
+      }
+    });
+  }
+
   return (
     <div className="flex gap-2">
       <Button variant="outline" size="sm" asChild>
@@ -20,13 +40,8 @@ export function InvoiceDetailActions({ invoiceId, invoiceNumber }: { invoiceId: 
           <FileDown className="h-3.5 w-3.5" /> Export PDF
         </a>
       </Button>
-      <Button
-        size="sm"
-        onClick={() =>
-          toast.info("Email delivery isn't set up yet — download the PDF and send it manually for now.")
-        }
-      >
-        <Send className="h-3.5 w-3.5" /> Send to Client
+      <Button size="sm" onClick={sendToClient} disabled={isSending}>
+        <Send className="h-3.5 w-3.5" /> {isSending ? "Sending..." : "Send to Client"}
       </Button>
     </div>
   );

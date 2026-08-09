@@ -1,9 +1,12 @@
 "use server";
 
 import { query, isAwsDbConfigured } from "@/lib/aws/db";
-import { nextInvoiceNumber } from "@/lib/data/invoices";
 import { requireInternalTeam } from "@/lib/auth-guard";
 import { logActivity } from "@/lib/data/activity";
+import { nextInvoiceNumber, getInvoiceById } from "@/lib/data/invoices";
+import { buildDocumentPdf } from "@/lib/pdf/document-pdf";
+import { sendEmail, isSesConfigured } from "@/lib/aws/ses";
+import { agency } from "@/lib/agency";
 import { revalidatePath } from "next/cache";
 
 interface CreateInvoiceItemInput {
@@ -80,4 +83,83 @@ export async function createInvoiceAction(input: CreateInvoiceInput): Promise<{ 
   revalidatePath("/dashboard");
 
   return { number, total };
+}
+
+/**
+ * Emails an invoice to its client with the generated PDF attached.
+ *
+ * Sends through SES rather than a third-party provider: the infrastructure is already on AWS, it
+ * costs a fraction of a cent per message, and it needs no extra vendor account. The PDF is built
+ * on the fly from current data so the attachment can never drift from what's in the system.
+ */
+export async function sendInvoiceEmailAction(invoiceId: string): Promise<{ sentTo: string }> {
+  const session = await requireInternalTeam();
+
+  if (!isSesConfigured) {
+    throw new Error("Email delivery isn't set up yet. Ask an admin to configure SES_FROM_ADDRESS.");
+  }
+
+  const invoice = await getInvoiceById(invoiceId);
+  if (!invoice) throw new Error("Invoice not found.");
+  if (!invoice.clientEmail) {
+    throw new Error(`${invoice.clientName} has no email address. Add one in CRM first.`);
+  }
+
+  const pdf = await buildDocumentPdf({
+    kind: "INVOICE",
+    number: invoice.number,
+    status: invoice.status,
+    clientName: invoice.clientName,
+    clientEmail: invoice.clientEmail,
+    clientPhone: invoice.clientPhone,
+    currency: invoice.currency,
+    issueDate: invoice.issueDate,
+    secondaryDate: invoice.dueDate,
+    items: invoice.items,
+    footerNote: invoice.notes,
+    serviceLabel: invoice.serviceLabel ?? invoice.items[0]?.description.split("\n")[0],
+    engagement: invoice.engagement,
+  });
+
+  const total = invoice.items.reduce(
+    (sum, i) => sum + i.quantity * i.rate - i.discount + i.tax,
+    0
+  );
+
+  await sendEmail({
+    to: invoice.clientEmail,
+    // Replies go to the sender rather than the no-reply identity, so a client question reaches a human.
+    replyTo: session.email,
+    subject: `Invoice ${invoice.number} from ${agency.name}`,
+    text: [
+      `Hi ${invoice.clientName},`,
+      "",
+      `Please find invoice ${invoice.number} attached, for ${invoice.currency} ${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}.`,
+      `It is due on ${invoice.dueDate}.`,
+      "",
+      "Bank transfer details are on the invoice. Please quote the invoice number with your payment.",
+      "",
+      "Any questions, just reply to this email.",
+      "",
+      "Thanks,",
+      `${session.name}`,
+      agency.name,
+    ].join("\n"),
+    attachment: {
+      filename: `${invoice.number}.pdf`,
+      contentType: "application/pdf",
+      content: pdf,
+    },
+  });
+
+  await logActivity({
+    actorId: session.mode === "cognito" ? session.sub : null,
+    entityType: "invoice",
+    action: `Invoice ${invoice.number} emailed to ${invoice.clientEmail}`,
+    entityId: invoice.id,
+  });
+
+  revalidatePath("/invoices");
+
+  return { sentTo: invoice.clientEmail };
 }

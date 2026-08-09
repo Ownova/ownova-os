@@ -30,6 +30,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     secondaryDate: invoice.dueDate,
     items: invoice.items,
     footerNote: invoice.notes,
+    serviceLabel: invoice.serviceLabel ?? invoice.items[0]?.description.split("\n")[0],
+    engagement: invoice.engagement,
   });
 
   return new NextResponse(Buffer.from(pdf), {
