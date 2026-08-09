@@ -2,6 +2,7 @@
 
 import { query } from "@/lib/aws/db";
 import { requireInternalTeam } from "@/lib/auth-guard";
+import { logActivity } from "@/lib/data/activity";
 import { revalidatePath } from "next/cache";
 
 export interface CreateClientInput {
@@ -14,7 +15,7 @@ export interface CreateClientInput {
 }
 
 export async function createClientAction(input: CreateClientInput) {
-  await requireInternalTeam();
+  const session = await requireInternalTeam();
 
   let companyId: string | null = null;
   if (input.company) {
@@ -42,6 +43,12 @@ export async function createClientAction(input: CreateClientInput) {
       value: input.value,
     }
   );
+
+  await logActivity({
+    actorId: session.mode === "cognito" ? session.sub : null,
+    entityType: "client",
+    action: `New client added: ${input.name}`,
+  });
 
   revalidatePath("/crm");
   revalidatePath("/dashboard");

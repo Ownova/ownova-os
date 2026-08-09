@@ -26,14 +26,32 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Monthly Revenue" value={formatCurrency(stats.monthlyRevenue)} icon={DollarSign} trend={{ value: "12.4%", positive: true }} />
+        <StatCard
+          label="Monthly Revenue"
+          value={formatCurrency(stats.monthlyRevenue)}
+          icon={DollarSign}
+          trend={
+            stats.revenueChangePct === null
+              ? undefined
+              : { value: `${Math.abs(stats.revenueChangePct).toFixed(1)}%`, positive: stats.revenueChangePct >= 0 }
+          }
+        />
         <StatCard label="Annual Revenue" value={formatCurrency(stats.annualRevenue)} icon={DollarSign} />
-        <StatCard label="Outstanding Payments" value={formatCurrency(stats.outstanding)} icon={Wallet} trend={{ value: "3 overdue", positive: false }} />
+        <StatCard
+          label="Outstanding Payments"
+          value={formatCurrency(stats.outstanding)}
+          icon={Wallet}
+          trend={stats.overdueInvoices > 0 ? { value: `${stats.overdueInvoices} overdue`, positive: false } : undefined}
+        />
         <StatCard label="Active Clients" value={String(stats.activeClients)} icon={Users} />
         <StatCard label="Active Projects" value={String(stats.activeProjects)} icon={FolderKanban} />
         <StatCard label="Team Members" value={String(stats.teamMembers)} icon={UsersRound} />
         <StatCard label="Pending Tasks" value={String(stats.pendingTasks)} icon={ListChecks} />
-        <StatCard label="Upcoming Meetings" value="4 this week" icon={Users} />
+        <StatCard
+          label="Upcoming Meetings"
+          value={stats.upcomingMeetings === 1 ? "1 this week" : `${stats.upcomingMeetings} this week`}
+          icon={Users}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -42,7 +60,7 @@ export default async function DashboardPage() {
           <ClientGrowthChart clientGrowth={clientGrowth} />
         </div>
         <div className="space-y-4">
-          <AIInsightsPanel />
+          <AIInsightsPanel stats={stats} />
           <ActivityFeed recentActivity={recentActivity} />
         </div>
       </div>

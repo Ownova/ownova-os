@@ -2,7 +2,7 @@
 
 import { query } from "@/lib/aws/db";
 import { requireInternalTeam } from "@/lib/auth-guard";
-import { getServerSession } from "@/lib/session";
+import { logActivity } from "@/lib/data/activity";
 import { revalidatePath } from "next/cache";
 
 export interface CreateExpenseInput {
@@ -42,7 +42,7 @@ export interface CreatePaymentInput {
 }
 
 export async function createPaymentAction(input: CreatePaymentInput) {
-  await requireInternalTeam();
+  const session = await requireInternalTeam();
 
   await query(
     `insert into payments (invoice_id, amount, method, status, paid_at)
@@ -55,6 +55,13 @@ export async function createPaymentAction(input: CreatePaymentInput) {
       paidAt: input.paidAt ?? null,
     }
   );
+
+  await logActivity({
+    actorId: session.mode === "cognito" ? session.sub : null,
+    entityType: "payment",
+    action: `Payment of ${input.amount.toLocaleString("en-US", { style: "currency", currency: "USD" })} recorded (${input.status})`,
+    entityId: input.invoiceId,
+  });
 
   revalidatePath("/payments");
   revalidatePath("/dashboard");

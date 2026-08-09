@@ -5,6 +5,7 @@ import {
   recentActivity as mockRecentActivity,
   dashboardStats as mockDashboardStats,
 } from "@/lib/mock-data";
+import { getRecentActivity as getRecentActivityFromLog } from "@/lib/data/activity";
 import type { ActivityItem } from "@/types";
 
 export interface DashboardStats {
@@ -15,16 +16,38 @@ export interface DashboardStats {
   activeProjects: number;
   teamMembers: number;
   pendingTasks: number;
+  /** Invoices past their due date and not yet settled. */
+  overdueInvoices: number;
+  /** Calendar events of type 'meeting' in the next 7 days. */
+  upcomingMeetings: number;
+  /**
+   * Percentage change in revenue vs the previous calendar month. Null when last month had no
+   * revenue at all, since "up from zero" isn't a meaningful percentage -- the UI hides the
+   * trend badge in that case rather than printing a fake number.
+   */
+  revenueChangePct: number | null;
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   if (!isAwsDbConfigured) return mockDashboardStats();
 
-  const [[revenue], [outstanding], [clientsCount], [projectsCount], [teamCount], [tasksCount]] = await Promise.all([
-    query<{ monthly: number; annual: number }>(
+  const [
+    [revenue],
+    [outstanding],
+    [clientsCount],
+    [projectsCount],
+    [teamCount],
+    [tasksCount],
+    [overdueCount],
+    [meetingsCount],
+  ] = await Promise.all([
+    query<{ monthly: number; annual: number; prev_month: number }>(
       `select
          coalesce(sum(amount) filter (where date_trunc('month', paid_at) = date_trunc('month', now())), 0) as monthly,
-         coalesce(sum(amount) filter (where paid_at >= date_trunc('year', now())), 0) as annual
+         coalesce(sum(amount) filter (where paid_at >= date_trunc('year', now())), 0) as annual,
+         coalesce(sum(amount) filter (
+           where date_trunc('month', paid_at) = date_trunc('month', now() - interval '1 month')
+         ), 0) as prev_month
        from payments where status = 'paid'`
     ),
     query<{ total: number }>(
@@ -39,16 +62,32 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     query<{ count: number }>(`select count(*)::int as count from projects where status in ('in_progress', 'planning')`),
     query<{ count: number }>(`select count(*)::int as count from users`),
     query<{ count: number }>(`select count(*)::int as count from project_tasks where status <> 'done'`),
+    query<{ count: number }>(
+      `select count(*)::int as count from invoices
+       where status in ('pending', 'overdue', 'partially_paid') and due_date < current_date`
+    ),
+    query<{ count: number }>(
+      `select count(*)::int as count from calendar_events
+       where type = 'meeting'
+         and event_date >= current_date
+         and event_date < current_date + interval '7 days'`
+    ),
   ]);
 
+  const monthly = Number(revenue?.monthly ?? 0);
+  const prevMonth = Number(revenue?.prev_month ?? 0);
+
   return {
-    monthlyRevenue: Number(revenue?.monthly ?? 0),
+    monthlyRevenue: monthly,
     annualRevenue: Number(revenue?.annual ?? 0),
     outstanding: Number(outstanding?.total ?? 0),
     activeClients: clientsCount?.count ?? 0,
     activeProjects: projectsCount?.count ?? 0,
     teamMembers: teamCount?.count ?? 0,
     pendingTasks: tasksCount?.count ?? 0,
+    overdueInvoices: overdueCount?.count ?? 0,
+    upcomingMeetings: meetingsCount?.count ?? 0,
+    revenueChangePct: prevMonth > 0 ? ((monthly - prevMonth) / prevMonth) * 100 : null,
   };
 }
 
@@ -112,9 +151,11 @@ export async function getClientGrowth(): Promise<{ month: string; clients: numbe
   });
 }
 
-// Real per-event activity logging (writing to audit_log on every create/update) isn't wired up
-// yet — that's a Phase 2c item. Until then, the activity feed stays on illustrative mock data
-// even in AWS-configured mode rather than showing an empty panel.
+/**
+ * Activity now comes from the real audit_log (see lib/data/activity.ts), written to by each
+ * create action. Mock events are only used when there's no database configured at all.
+ */
 export async function getRecentActivity(): Promise<ActivityItem[]> {
-  return mockRecentActivity;
+  if (!isAwsDbConfigured) return mockRecentActivity;
+  return getRecentActivityFromLog();
 }

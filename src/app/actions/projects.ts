@@ -2,6 +2,7 @@
 
 import { query } from "@/lib/aws/db";
 import { requireInternalTeam } from "@/lib/auth-guard";
+import { logActivity } from "@/lib/data/activity";
 import { revalidatePath } from "next/cache";
 
 export interface CreateProjectInput {
@@ -13,7 +14,7 @@ export interface CreateProjectInput {
 }
 
 export async function createProjectAction(input: CreateProjectInput) {
-  await requireInternalTeam();
+  const session = await requireInternalTeam();
 
   await query(
     `insert into projects (client_id, name, description, status, budget, due_date)
@@ -26,6 +27,12 @@ export async function createProjectAction(input: CreateProjectInput) {
       dueDate: input.dueDate ?? null,
     }
   );
+
+  await logActivity({
+    actorId: session.mode === "cognito" ? session.sub : null,
+    entityType: "project",
+    action: `Project created: ${input.name}`,
+  });
 
   revalidatePath("/projects");
   revalidatePath("/dashboard");
@@ -40,7 +47,7 @@ export interface CreateTaskInput {
 }
 
 export async function createTaskAction(input: CreateTaskInput) {
-  await requireInternalTeam();
+  const session = await requireInternalTeam();
 
   await query(
     `insert into project_tasks (project_id, title, status, priority, assignee_id, due_date)
@@ -54,6 +61,14 @@ export async function createTaskAction(input: CreateTaskInput) {
     }
   );
 
+  await logActivity({
+    actorId: session.mode === "cognito" ? session.sub : null,
+    entityType: "task",
+    action: `Task created: ${input.title}`,
+    entityId: input.projectId,
+  });
+
   revalidatePath("/tasks");
+  revalidatePath("/dashboard");
   revalidatePath(`/projects/${input.projectId}`);
 }

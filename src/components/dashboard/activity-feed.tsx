@@ -17,6 +17,11 @@ export function ActivityFeed({ recentActivity }: { recentActivity: ActivityItem[
         <CardTitle className="text-foreground text-base font-semibold">Recent Activity</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
+        {recentActivity.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No activity yet. Creating clients, projects, invoices, or payments will show up here.
+          </p>
+        )}
         {recentActivity.map((a) => {
           const Icon = iconMap[a.type];
           return (

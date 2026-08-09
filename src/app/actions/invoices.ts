@@ -3,6 +3,8 @@
 import { query, isAwsDbConfigured } from "@/lib/aws/db";
 import { nextInvoiceNumber } from "@/lib/data/invoices";
 import { requireInternalTeam } from "@/lib/auth-guard";
+import { logActivity } from "@/lib/data/activity";
+import { revalidatePath } from "next/cache";
 
 interface CreateInvoiceItemInput {
   description: string;
@@ -31,7 +33,7 @@ export interface CreateInvoiceInput {
  * fixable, but worth revisiting with withUserContext()-style transactional writes later.
  */
 export async function createInvoiceAction(input: CreateInvoiceInput): Promise<{ number: string; total: number }> {
-  await requireInternalTeam();
+  const session = await requireInternalTeam();
   const number = await nextInvoiceNumber();
   const total = input.items.reduce((sum, item) => sum + item.quantity * item.rate - item.discount + item.tax, 0);
 
@@ -66,6 +68,16 @@ export async function createInvoiceAction(input: CreateInvoiceInput): Promise<{ 
       }
     );
   }
+
+  await logActivity({
+    actorId: session.mode === "cognito" ? session.sub : null,
+    entityType: "invoice",
+    action: `Invoice ${number} created`,
+    entityId: invoiceId,
+  });
+
+  revalidatePath("/invoices");
+  revalidatePath("/dashboard");
 
   return { number, total };
 }

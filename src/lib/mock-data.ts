@@ -412,6 +412,8 @@ export function dashboardStats() {
   const activeClients = clients.filter((c) => !["lost"].includes(c.stage)).length;
   const activeProjects = projects.filter((p) => p.status === "in_progress" || p.status === "planning").length;
   const pendingTasks = projectTasks.filter((t) => t.status !== "done").length;
+  const overdueInvoices = invoices.filter((i) => i.status === "overdue").length;
+  const prevMonthRevenue = revenueByMonth[revenueByMonth.length - 2]?.revenue ?? 0;
 
   return {
     monthlyRevenue,
@@ -421,5 +423,9 @@ export function dashboardStats() {
     activeProjects,
     teamMembers: teamMembers.length,
     pendingTasks,
+    overdueInvoices,
+    upcomingMeetings: calendarEvents.filter((e) => e.type === "meeting").length,
+    revenueChangePct:
+      prevMonthRevenue > 0 ? ((monthlyRevenue - prevMonthRevenue) / prevMonthRevenue) * 100 : null,
   };
 }
