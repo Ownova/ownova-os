@@ -8,7 +8,13 @@ import {
   type SqlParameter,
 } from "@aws-sdk/client-rds-data";
 
-const region = process.env.AWS_REGION;
+// Note: Amplify Hosting reserves the "AWS_" env var prefix for its own internal use, so the
+// region/access key/secret key are read from APP_AWS_* names instead (set in Amplify console
+// or .env.local) and passed explicitly to the SDK client, since the default credential chain
+// only looks for the reserved AWS_* names.
+const region = process.env.APP_AWS_REGION;
+const accessKeyId = process.env.APP_AWS_ACCESS_KEY_ID;
+const secretAccessKey = process.env.APP_AWS_SECRET_ACCESS_KEY;
 const resourceArn = process.env.DB_CLUSTER_ARN;
 const secretArn = process.env.DB_SECRET_ARN;
 const database = process.env.DB_NAME ?? "ownova";
@@ -20,11 +26,14 @@ let client: RDSDataClient | null = null;
 function getClient() {
   if (!isAwsDbConfigured) {
     throw new Error(
-      "Aurora is not configured. Set AWS_REGION, DB_CLUSTER_ARN, DB_SECRET_ARN in .env.local, " +
+      "Aurora is not configured. Set APP_AWS_REGION, DB_CLUSTER_ARN, DB_SECRET_ARN in .env.local, " +
         "or keep using mock data from src/lib/mock-data.ts."
     );
   }
-  client ??= new RDSDataClient({ region });
+  client ??= new RDSDataClient({
+    region,
+    ...(accessKeyId && secretAccessKey ? { credentials: { accessKeyId, secretAccessKey } } : {}),
+  });
   return client;
 }
 

@@ -1,7 +1,10 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const region = process.env.AWS_REGION;
+// Amplify Hosting reserves the "AWS_" prefix, so region/keys are read from APP_AWS_* instead.
+const region = process.env.APP_AWS_REGION;
+const accessKeyId = process.env.APP_AWS_ACCESS_KEY_ID;
+const secretAccessKey = process.env.APP_AWS_SECRET_ACCESS_KEY;
 const bucket = process.env.S3_BUCKET_NAME;
 
 export const isS3Configured = Boolean(region && bucket);
@@ -9,9 +12,12 @@ export const isS3Configured = Boolean(region && bucket);
 let client: S3Client | null = null;
 function getClient() {
   if (!isS3Configured) {
-    throw new Error("S3 is not configured. Set AWS_REGION and S3_BUCKET_NAME in .env.local.");
+    throw new Error("S3 is not configured. Set APP_AWS_REGION and S3_BUCKET_NAME in .env.local.");
   }
-  client ??= new S3Client({ region });
+  client ??= new S3Client({
+    region,
+    ...(accessKeyId && secretAccessKey ? { credentials: { accessKeyId, secretAccessKey } } : {}),
+  });
   return client;
 }
 

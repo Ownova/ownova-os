@@ -6,7 +6,10 @@ import {
   GlobalSignOutCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 
-const region = process.env.AWS_REGION;
+// Amplify Hosting reserves the "AWS_" prefix, so region/keys are read from APP_AWS_* instead.
+const region = process.env.APP_AWS_REGION;
+const accessKeyId = process.env.APP_AWS_ACCESS_KEY_ID;
+const secretAccessKey = process.env.APP_AWS_SECRET_ACCESS_KEY;
 const userPoolId = process.env.COGNITO_USER_POOL_ID;
 const clientId = process.env.COGNITO_CLIENT_ID;
 
@@ -16,11 +19,14 @@ let client: CognitoIdentityProviderClient | null = null;
 function getClient() {
   if (!isCognitoConfigured) {
     throw new Error(
-      "Cognito is not configured. Set AWS_REGION, COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID " +
+      "Cognito is not configured. Set APP_AWS_REGION, COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID " +
         "in .env.local, or keep using mock/demo auth (see src/lib/auth.ts)."
     );
   }
-  client ??= new CognitoIdentityProviderClient({ region });
+  client ??= new CognitoIdentityProviderClient({
+    region,
+    ...(accessKeyId && secretAccessKey ? { credentials: { accessKeyId, secretAccessKey } } : {}),
+  });
   return client;
 }
 
