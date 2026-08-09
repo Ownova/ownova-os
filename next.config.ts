@@ -69,6 +69,7 @@ const nextConfig: NextConfig = {
     DB_SECRET_ARN: process.env.DB_SECRET_ARN ?? "",
     DB_NAME: process.env.DB_NAME ?? "",
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME ?? "",
+    SES_FROM_ADDRESS: process.env.SES_FROM_ADDRESS ?? "",
   },
 };
 
