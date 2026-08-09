@@ -2,8 +2,8 @@ import { Upload, FileText, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { documents } from "@/lib/mock-data";
 import { formatDate } from "@/lib/utils";
+import { getDocuments } from "@/lib/data/documents";
 
 const folders = ["Contracts", "Invoices", "Quotations", "Brand Assets", "Client Files"] as const;
 
@@ -11,7 +11,8 @@ function formatSize(kb: number) {
   return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
 }
 
-export default function DocumentsPage() {
+export default async function DocumentsPage() {
+  const documents = await getDocuments();
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">

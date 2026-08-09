@@ -1,8 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { calendarEvents } from "@/lib/mock-data";
 import { cn, formatDate } from "@/lib/utils";
 import type { CalendarEvent } from "@/types";
+import { getCalendarEvents } from "@/lib/data/calendar";
 
 const typeStyles: Record<CalendarEvent["type"], { label: string; dot: string; variant: "default" | "warning" | "destructive" | "secondary" }> = {
   meeting: { label: "Meeting", dot: "bg-primary", variant: "default" },
@@ -15,7 +15,8 @@ const typeStyles: Record<CalendarEvent["type"], { label: string; dot: string; va
 const YEAR = 2026;
 const MONTH = 7; // 0-indexed August
 
-export default function CalendarPage() {
+export default async function CalendarPage() {
+  const calendarEvents = await getCalendarEvents();
   const first = new Date(YEAR, MONTH, 1);
   const daysInMonth = new Date(YEAR, MONTH + 1, 0).getDate();
   const leadingBlanks = first.getDay();
