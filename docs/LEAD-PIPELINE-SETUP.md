@@ -21,7 +21,7 @@ no paid Calendly, no new AWS resources.
 2. Apps Script fires within ~2 seconds and POSTs the answers to `/api/intake/lead`.
 3. Ownova OS creates a **CRM lead** (stage `lead`, never `client`), creates the company if it's
    new, and writes every questionnaire answer to a client note.
-4. The form's confirmation screen shows the **Cal.com booking link**.
+4. The form's confirmation screen gives them **https://cal.com/ownova/automation-assessment**.
 5. They book. Cal.com POSTs to `/api/intake/booking`.
 6. Ownova OS adds a **calendar event**, moves them to stage `meeting`, and prepares a
    **draft quotation** numbered and attached to the right client.
@@ -33,10 +33,10 @@ assessment; invoicing before the call would break that promise. A human presses 
 
 ---
 
-## Step 1 — Add the secrets in Amplify
+## Step 1 — Add the secrets in Amplify  ✅ DONE
 
-AWS Amplify Console → `ownova-os` → Hosting → **Environment variables** → add both, then
-**Redeploy** (env vars only reach the running app on a fresh build):
+Both variables are already set on the Amplify app and build 32 shipped with them. Listed here
+for reference and for rebuilding the environment from scratch:
 
 | Name | Value |
 |---|---|
@@ -50,84 +50,92 @@ place that sends it (Apps Script / Cal.com), then redeploying.
 
 ---
 
-## Step 2 — Google Form → Apps Script
+## Step 2 — Google Form → Apps Script  ✅ DONE
 
-Open the form's response spreadsheet → **Extensions → Apps Script** → replace everything with:
+**Status: live and verified.** Project `Ownova OS — Lead Intake` at
+[script.google.com](https://script.google.com/u/1/home) (Ownova account), trigger installed,
+tested with two real form submissions.
 
-```javascript
-// Ownova OS lead intake.
-// Fires on every form submission and posts the answers to the CRM.
+### Why it's a standalone script, not a form-bound one
 
-const OWNOVA_ENDPOINT = 'https://os.ownova.org/api/intake/lead';
-const OWNOVA_SECRET   = 'HfrOCckNNPrt-dxlTJe5iflCzzZMNpPgoheq8iFBx6msACs6';
+The **Apps Script** item inside the form's ⋮ menu fails with *"Sorry, unable to open the file at
+present"*. That's a Google multi-account bug — with `syedown109@` and `ownova.org@` both signed
+in, `script.google.com` resolves the bound-script link against the wrong account.
 
-function onOwnovaFormSubmit(e) {
-  const payload = { source: 'google_form' };
+The working approach is a standalone project that attaches its own trigger to the form by ID via
+`ScriptApp.newTrigger(...).forForm(FormApp.openById(FORM_ID)).onFormSubmit()`. An installable
+trigger created this way delivers the identical event object (`e.response`), so nothing is lost.
 
-  // Google sends the *question text* as the key. Those get reworded whenever the form is
-  // edited, so map the ones we care about onto stable names and pass the rest through
-  // verbatim — the endpoint keeps everything for the client note either way.
-  e.response.getItemResponses().forEach(function (item) {
-    const question = item.getItem().getTitle();
-    const answer   = item.getResponse();
-    if (!answer) return;
+Form ID: `15y2UYIDdmDpMUq03N9laMPNMDGcYUpqrRCZC2BSJJ9I`
 
-    const q = question.toLowerCase();
-    if (q.indexOf('email') > -1)                              payload.email   = answer;
-    else if (q.indexOf('name') > -1 && q.indexOf('company') === -1 && q.indexOf('brand') === -1)
-                                                              payload.name    = answer;
-    else if (q.indexOf('phone') > -1 || q.indexOf('whatsapp') > -1) payload.phone = answer;
-    else if (q.indexOf('company') > -1 || q.indexOf('brand') > -1)  payload.company = answer;
-    else if (q.indexOf('website') > -1 || q.indexOf('linkedin') > -1 || q.indexOf('instagram') > -1)
-                                                              payload.website = answer;
+### The mapping bug this caught
 
-    payload[question] = answer;
-  });
+The first version assigned `payload.name` for **every** question containing the word "name". The
+questionnaire runs to seven sections, and a later question overwrote the respondent's actual
+Full Name — the first live test came through as *"Test response - Ownova pipeline check"*
+instead of the name that was typed in.
 
-  // Google's own response ID. This is what makes a retry a no-op instead of a duplicate lead.
-  payload.responseId = e.response.getId();
+Fixed with a `setOnce()` helper so **first match wins**. Re-tested: a submission whose later
+answers all read "MUST NOT overwrite the name field" arrived with `name = "Correct Person Name"`.
 
-  const result = UrlFetchApp.fetch(OWNOVA_ENDPOINT, {
-    method: 'post',
-    contentType: 'application/json',
-    headers: { 'x-ownova-secret': OWNOVA_SECRET },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  });
+If you ever edit the script, keep that guard. Field mapping by keyword is convenient but
+last-write-wins is the failure mode it invites.
 
-  // Logged rather than thrown: a failed sync must never make the respondent see an error.
-  // Check Apps Script → Executions if a lead doesn't appear.
-  console.log('Ownova intake:', result.getResponseCode(), result.getContentText());
-}
-```
+### Two gotchas if you edit the script
 
-Then wire the trigger: left sidebar → **Triggers** (clock icon) → **Add Trigger**
+- **Ctrl+S may not save.** The title bar shows *"Unsaved changes"* even after pressing it. Click
+  the disk icon in the toolbar instead, and confirm it reads *"Saved to Drive"* before running
+  anything — the trigger executes the last **saved** version, not what's on screen.
+- **`setupOwnovaTrigger` is safe to re-run.** It deletes its own old triggers first, so it can't
+  stack up duplicate handlers that would create the same lead twice. Verified: after running it
+  twice, the Triggers panel still showed exactly one.
 
-- Function: `onOwnovaFormSubmit`
-- Event source: **From form**
-- Event type: **On form submit**
+## Step 3 — Cal.com  ✅ DONE
 
-Authorise when prompted (Google will warn the script is unverified — it's yours, continue).
+**Status: live and verified with a real booking.**
 
-**Test it:** submit the form yourself, then check CRM in Ownova OS. If nothing appears, Apps
-Script → **Executions** shows the HTTP status and response body.
+| | |
+|---|---|
+| Public booking link | **https://cal.com/ownova/automation-assessment** |
+| Event type | Automation Assessment, 30 min, Cal Video |
+| Profile | `cal.com/ownova` (the auto-generated `own-business-ipflqf` was claimed properly) |
+| Google Calendar | Connected — Cal knows when you're busy, no double-booking |
+| Timezone | Asia/Karachi |
+| Webhook | `https://os.ownova.org/api/intake/booking`, **Booking created only**, HMAC secret set |
+
+### The webhook only listens for "Booking created"
+
+Cal pre-selects *every* trigger by default — cancellations, reschedules, no-shows, recordings.
+Left as-is, a cancelled call would still have hit the endpoint. The endpoint ignores anything
+that isn't `BOOKING_CREATED` and returns 200 so Cal stops retrying, but narrowing the
+subscription means those deliveries never happen at all.
+
+### Verified end to end
+
+A real booking through the public page produced, in Ownova OS:
+
+- client `Pipeline Test Booking`, stage **meeting**, source **cal_booking**
+- calendar event *Automation Assessment between Ownova and Pipeline Test Booking* on the right date
+- draft quotation **QUO-2026-0001**
+- the booking notes saved as a client note
+
+Then cancelled and all test data removed.
+
+**The webhook is not instant.** It took roughly two minutes to arrive. If you book something
+and the CRM looks empty, wait before assuming it's broken.
+
+Before the real booking, the endpoint was also proved against forged payloads: an unsigned
+request → 401, a correctly-signed one → 200, a body tampered with after signing → 401, a repeat
+of the same booking uid → `duplicate: true` with no second quotation.
 
 ---
 
-## Step 3 — Cal.com
+## Step 4 — Form thank-you page  ✅ DONE
 
-1. Sign up at [cal.com](https://cal.com) (free tier is enough) and connect your Google Calendar
-   so it knows when you're busy.
-2. Create an event type — e.g. **Automation Assessment, 30 min**.
-3. Settings → **Webhooks** → New:
-   - Subscriber URL: `https://os.ownova.org/api/intake/booking`
-   - Event triggers: **Booking Created**
-   - Secret: `bFWodUAVz_bHsTht470VYjtXyEvqcy4_cFcRpbtUdmviY32O`
-4. Copy your booking link and paste it into the Google Form's confirmation message:
-   *Form → Settings → Presentation → Confirmation message.*
-
-Cal signs each delivery with HMAC-SHA256 over the raw body; the endpoint verifies it before
-touching the database, so nobody can forge a booking by guessing the URL.
+The confirmation message now leads with the booking link, so completing the questionnaire flows
+straight into booking. Google Forms confirmation screens are plain text only — the URL is not
+clickable, respondents copy it. That platform limit is the main argument for eventually moving
+the form to `os.ownova.org/start`, where the booking widget can be embedded directly.
 
 ---
 
