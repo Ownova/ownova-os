@@ -45,13 +45,22 @@ function getClient() {
 export type SqlParams = Record<string, string | number | boolean | null | Date | undefined>;
 
 /**
- * Canonical UUID form (8-4-4-4-12 hex). Every id and foreign key in the schema is a Postgres
- * `uuid`, and the Data API sends bare strings as `text` — Postgres refuses to compare or assign
- * `text` to `uuid` ("column is of type uuid but expression is of type text"), so anything
- * matching this shape is tagged with the UUID type hint. Handling it here rather than casting in
- * each statement means new queries can't reintroduce the bug by forgetting a `::uuid`.
+ * The Data API transmits every JS string as Postgres `text`, and Postgres will not implicitly
+ * assign or compare `text` to `uuid`, `date` or `timestamp`. Each mismatch surfaces as
+ * "column X is of type Y but expression is of type text" and fails the whole statement.
+ *
+ * These patterns tag values with the right Data API typeHint centrally, so a new query can't
+ * reintroduce the bug by forgetting a `::uuid` or `::date` cast. This has now bitten three times
+ * (timestamps on the dashboard, uuids on every write, dates on invoice creation) — inferring the
+ * type from the value is the only version of this that stays fixed.
  */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Plain calendar date, e.g. "2026-08-23" — what <input type="date"> submits. */
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Date + time without timezone, e.g. "2026-08-23 14:30:00" or with a "T" separator. */
+const DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?/;
 
 function toSqlParameters(params?: SqlParams): SqlParameter[] | undefined {
   if (!params) return undefined;
@@ -63,17 +72,28 @@ function toSqlParameters(params?: SqlParams): SqlParameter[] | undefined {
         ? { name, value: { longValue: value } }
         : { name, value: { doubleValue: value } };
     }
-    if (typeof value === "string" && UUID_PATTERN.test(value)) {
-      return { name, value: { stringValue: value }, typeHint: "UUID" };
-    }
-    // Data API needs an explicit typeHint for timestamp comparisons, otherwise Postgres sees a
-    // plain text literal and errors with "operator does not exist: timestamp with time zone >= text".
     // The TIMESTAMP typeHint requires SQL format ("YYYY-MM-DD HH:MM:SS.sss"), NOT ISO 8601 --
     // passing toISOString() as-is (with "T" and "Z") fails with "Parse Error for TimeStamp".
     if (value instanceof Date) {
       const sqlTimestamp = value.toISOString().replace("T", " ").replace("Z", "");
       return { name, value: { stringValue: sqlTimestamp }, typeHint: "TIMESTAMP" };
     }
+
+    if (typeof value === "string") {
+      if (UUID_PATTERN.test(value)) {
+        return { name, value: { stringValue: value }, typeHint: "UUID" };
+      }
+      if (DATE_PATTERN.test(value)) {
+        // Postgres accepts a date where a timestamp is expected, so this is also correct for
+        // timestamptz columns that receive a date-only value (e.g. payments.paid_at).
+        return { name, value: { stringValue: value }, typeHint: "DATE" };
+      }
+      if (DATETIME_PATTERN.test(value)) {
+        const sqlTimestamp = value.replace("T", " ").replace("Z", "").split(".")[0];
+        return { name, value: { stringValue: sqlTimestamp }, typeHint: "TIMESTAMP" };
+      }
+    }
+
     return { name, value: { stringValue: value } };
   });
 }

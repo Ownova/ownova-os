@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 import { createInvoiceAction } from "@/app/actions/invoices";
 import type { Client } from "@/types";
 
@@ -72,7 +72,7 @@ export function InvoiceForm({ clients }: { clients: Client[] }) {
       toast.success(`${result.number} created for ${formatCurrency(result.total, values.currency)}`);
       router.push("/invoices");
     } catch (error) {
-      toast.error(describeActionError(error, "Could not create this invoice."));
+      toastActionError(error, "Could not create this invoice.");
     }
   }
 

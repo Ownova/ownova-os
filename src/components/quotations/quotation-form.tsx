@@ -15,7 +15,7 @@ import { formatCurrency } from "@/lib/utils";
 import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
 import { createQuotationAction } from "@/app/actions/quotations";
 import type { Client } from "@/types";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 
 const itemSchema = z.object({
   description: z.string().min(1, "Required"),
@@ -70,7 +70,7 @@ export function QuotationForm({ clients }: { clients: Client[] }) {
       toast.success(`${result.number} created for ${formatCurrency(result.total, values.currency)}`);
       router.push("/quotations");
     } catch (error) {
-      toast.error(describeActionError(error, "Could not create this quotation."));
+      toastActionError(error, "Could not create this quotation.");
     }
   }
 

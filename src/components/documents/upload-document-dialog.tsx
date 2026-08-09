@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { prepareDocumentUploadAction, recordDocumentAction } from "@/app/actions/documents";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 
 const FOLDERS = ["Contracts", "Invoices", "Quotations", "Brand Assets", "Client Files"];
 
@@ -60,7 +60,7 @@ export function UploadDocumentDialog() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       router.refresh();
     } catch (error) {
-      toast.error(describeActionError(error, "Upload failed."));
+      toastActionError(error, "Upload failed.");
     } finally {
       setIsUploading(false);
     }

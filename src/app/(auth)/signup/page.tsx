@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { signUp, confirmSignUp, resendConfirmationCode } from "@/lib/auth";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 
 // Mirrors the Cognito user pool's password policy exactly. Previously this only required 6
 // characters, so a valid-looking password was accepted by the form and then rejected by Cognito
@@ -58,7 +58,7 @@ export default function SignupPage() {
       );
       router.push("/dashboard");
     } catch (e) {
-      toast.error(describeActionError(e, "Could not create account"));
+      toastActionError(e, "Could not create account");
     }
   }
 
@@ -70,7 +70,7 @@ export default function SignupPage() {
       toast.success("Email verified — welcome to Ownova OS.");
       router.push("/dashboard");
     } catch (e) {
-      toast.error(describeActionError(e, "Invalid or expired code"));
+      toastActionError(e, "Invalid or expired code");
     } finally {
       setConfirming(false);
     }
@@ -82,7 +82,7 @@ export default function SignupPage() {
       await resendConfirmationCode(pendingEmail);
       toast.success("Code resent — check your email.");
     } catch (e) {
-      toast.error(describeActionError(e, "Couldn't resend code"));
+      toastActionError(e, "Couldn't resend code");
     }
   }
 

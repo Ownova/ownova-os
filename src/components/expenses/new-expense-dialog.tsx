@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createExpenseAction } from "@/app/actions/expenses";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 
 export function NewExpenseDialog() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export function NewExpenseDialog() {
       setOpen(false);
       router.refresh();
     } catch (err) {
-      toast.error(describeActionError(err, "Couldn't log expense"));
+      toastActionError(err, "Couldn't log expense");
     } finally {
       setSubmitting(false);
     }

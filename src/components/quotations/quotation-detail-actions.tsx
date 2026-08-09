@@ -6,7 +6,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { convertQuotationToInvoiceAction } from "@/app/actions/quotations";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 
 /**
  * Export PDF now downloads a real generated document, and Convert to Invoice actually writes the
@@ -29,7 +29,7 @@ export function QuotationDetailActions({
         toast.success(`${quotationNumber} converted to draft invoice ${number}`);
         router.push(`/invoices/${invoiceId}`);
       } catch (error) {
-        toast.error(describeActionError(error, "Could not convert this quotation."));
+        toastActionError(error, "Could not convert this quotation.");
       }
     });
   }

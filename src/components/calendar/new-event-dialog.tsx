@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createCalendarEventAction } from "@/app/actions/calendar";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 
 const types = ["meeting", "deadline", "invoice_due", "task"];
 
@@ -33,7 +33,7 @@ export function NewEventDialog() {
       setOpen(false);
       router.refresh();
     } catch (err) {
-      toast.error(describeActionError(err, "Couldn't add event"));
+      toastActionError(err, "Couldn't add event");
     } finally {
       setSubmitting(false);
     }

@@ -2,10 +2,9 @@
 
 import { useTransition } from "react";
 import { Download } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getDocumentDownloadUrlAction } from "@/app/actions/documents";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 
 /**
  * Documents are private in S3, so there's no static URL to link to. This asks the server for a
@@ -20,7 +19,7 @@ export function DocumentDownloadButton({ documentId, fileName }: { documentId: s
         const url = await getDocumentDownloadUrlAction(documentId);
         window.open(url, "_blank", "noopener,noreferrer");
       } catch (error) {
-        toast.error(describeActionError(error, `Could not download ${fileName}.`));
+        toastActionError(error, `Could not download ${fileName}.`);
       }
     });
   }

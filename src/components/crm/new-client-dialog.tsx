@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createClientAction } from "@/app/actions/clients";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 
 const stages = ["lead", "contacted", "meeting", "proposal_sent", "negotiation", "won", "lost"];
 
@@ -35,7 +35,7 @@ export function NewClientDialog() {
       setOpen(false);
       router.refresh();
     } catch (err) {
-      toast.error(describeActionError(err, "Couldn't add client"));
+      toastActionError(err, "Couldn't add client");
     } finally {
       setSubmitting(false);
     }

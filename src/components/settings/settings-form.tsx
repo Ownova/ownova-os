@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 import { saveSettingsAction } from "@/app/actions/settings";
 import type { SettingsMap } from "@/lib/settings-keys";
 
@@ -36,7 +36,7 @@ export function SettingsForm({
       await saveSettingsAction(values);
       toast.success("Settings saved");
     } catch (error) {
-      toast.error(describeActionError(error, "Could not save settings."));
+      toastActionError(error, "Could not save settings.");
     } finally {
       setSaving(false);
     }

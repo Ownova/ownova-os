@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { signIn, confirmSignUp, resendConfirmationCode } from "@/lib/auth";
-import { describeActionError } from "@/lib/action-error";
+import { toastActionError } from "@/lib/action-toast";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -58,7 +58,7 @@ export default function LoginPage() {
       );
       router.push("/dashboard");
     } catch (e) {
-      toast.error(describeActionError(e, "Could not sign in"));
+      toastActionError(e, "Could not sign in");
     }
   }
 
@@ -70,7 +70,7 @@ export default function LoginPage() {
       toast.success("Email verified — welcome to Ownova OS.");
       router.push("/dashboard");
     } catch (e) {
-      toast.error(describeActionError(e, "Invalid or expired code"));
+      toastActionError(e, "Invalid or expired code");
     } finally {
       setConfirming(false);
     }
@@ -82,7 +82,7 @@ export default function LoginPage() {
       await resendConfirmationCode(pendingEmail);
       toast.success("Code resent — check your email.");
     } catch (e) {
-      toast.error(describeActionError(e, "Couldn't resend code"));
+      toastActionError(e, "Couldn't resend code");
     }
   }
 
