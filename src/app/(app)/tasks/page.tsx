@@ -4,9 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TaskBoard } from "@/components/projects/task-board";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { projectTasks, projects } from "@/lib/mock-data";
 import { formatDate } from "@/lib/utils";
 import type { TaskPriority } from "@/types";
+import { getAllTasks, getProjects } from "@/lib/data/projects";
 
 const priorityVariant: Record<TaskPriority, "secondary" | "default" | "warning" | "destructive"> = {
   low: "secondary",
@@ -15,7 +15,8 @@ const priorityVariant: Record<TaskPriority, "secondary" | "default" | "warning" 
   urgent: "destructive",
 };
 
-export default function TasksPage() {
+export default async function TasksPage() {
+  const [projectTasks, projects] = await Promise.all([getAllTasks(), getProjects()]);
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">

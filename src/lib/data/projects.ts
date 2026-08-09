@@ -81,6 +81,19 @@ function rowToTask(row: TaskRow): ProjectTask {
   };
 }
 
+/** All tasks across every project — used by the global Tasks page and Team workload counts. */
+export async function getAllTasks(): Promise<ProjectTask[]> {
+  if (!isAwsDbConfigured) return mockProjectTasks;
+  const rows = await query<TaskRow>(
+    `select t.id, t.project_id, t.title, t.status, t.priority, t.due_date, t.labels,
+            u.full_name as assignee_name
+     from project_tasks t
+     left join users u on u.id = t.assignee_id
+     order by t.created_at desc`
+  );
+  return rows.map(rowToTask);
+}
+
 export async function getProjectTasks(projectId: string): Promise<ProjectTask[]> {
   if (!isAwsDbConfigured) return mockProjectTasks.filter((t) => t.projectId === projectId);
   const rows = await query<TaskRow>(

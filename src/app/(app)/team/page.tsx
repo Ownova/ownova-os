@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { teamMembers, projectTasks } from "@/lib/mock-data";
 import { initials } from "@/lib/utils";
+import { getTeamMembers } from "@/lib/data/team";
+import { getAllTasks } from "@/lib/data/projects";
 
-export default function TeamPage() {
+export default async function TeamPage() {
+  const [teamMembers, projectTasks] = await Promise.all([getTeamMembers(), getAllTasks()]);
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
