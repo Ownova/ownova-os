@@ -94,6 +94,38 @@ function rowsToObjects(records: Field[][] | undefined, columnNames: string[]): R
   });
 }
 
+// ---- resume handling -----------------------------------------------------------------------
+
+/**
+ * Aurora Serverless v2 scales to zero when idle (that's what keeps this cheap). The first query
+ * after a pause fails immediately with DatabaseResumingException while the instance wakes, which
+ * typically takes 15-30s. Without this retry, the first person to load the app after a quiet
+ * period gets an error page. Retries with backoff, only for the resuming case -- real SQL errors
+ * still surface immediately.
+ */
+const RESUME_MAX_ATTEMPTS = 8;
+const RESUME_DELAY_MS = 4000;
+
+function isResumingError(err: unknown): boolean {
+  const name = (err as { name?: string })?.name ?? "";
+  const message = (err as { message?: string })?.message ?? "";
+  return name === "DatabaseResumingException" || message.includes("resuming after being auto-paused");
+}
+
+async function sendWithResumeRetry<T>(run: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < RESUME_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await run();
+    } catch (err) {
+      if (!isResumingError(err)) throw err;
+      lastError = err;
+      await new Promise((resolve) => setTimeout(resolve, RESUME_DELAY_MS));
+    }
+  }
+  throw lastError;
+}
+
 // ---- public API ----------------------------------------------------------------------------
 
 /**
@@ -101,15 +133,17 @@ function rowsToObjects(records: Field[][] | undefined, columnNames: string[]): R
  * the app.current_user_id / app.current_role session variables set (see withUserContext).
  */
 export async function query<T = Record<string, unknown>>(sql: string, params?: SqlParams): Promise<T[]> {
-  const res = await getClient().send(
-    new ExecuteStatementCommand({
-      resourceArn,
-      secretArn,
-      database,
-      sql,
-      parameters: toSqlParameters(params),
-      includeResultMetadata: true,
-    })
+  const res = await sendWithResumeRetry(() =>
+    getClient().send(
+      new ExecuteStatementCommand({
+        resourceArn,
+        secretArn,
+        database,
+        sql,
+        parameters: toSqlParameters(params),
+        includeResultMetadata: true,
+      })
+    )
   );
   const columnNames = (res.columnMetadata ?? []).map((c) => c.name ?? "");
   return rowsToObjects(res.records, columnNames) as T[];
@@ -132,7 +166,11 @@ export async function withUserContext<T>(
   fn: (run: (sql: string, params?: SqlParams) => Promise<Record<string, unknown>[]>) => Promise<T>
 ): Promise<T> {
   const c = getClient();
-  const { transactionId } = await c.send(new BeginTransactionCommand({ resourceArn, secretArn, database }));
+  // Only the transaction-opening call needs resume handling: if the cluster is paused it fails
+  // here, and once BeginTransaction succeeds the instance is awake for the statements that follow.
+  const { transactionId } = await sendWithResumeRetry(() =>
+    c.send(new BeginTransactionCommand({ resourceArn, secretArn, database }))
+  );
 
   const run = async (sql: string, params?: SqlParams) => {
     const res = await c.send(
