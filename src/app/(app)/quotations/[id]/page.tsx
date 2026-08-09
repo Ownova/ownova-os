@@ -1,30 +1,20 @@
-"use client";
-
-import { notFound, useParams, useRouter } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, FileText, Printer, Send } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { quotations, clients } from "@/lib/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getQuotationById } from "@/lib/data/quotations";
+import { getClientById } from "@/lib/data/clients";
+import { QuotationDetailActions } from "@/components/quotations/quotation-detail-actions";
 
-export default function QuotationDetailPage() {
-  const params = useParams<{ id: string }>();
-  const router = useRouter();
-  const quotation = quotations.find((q) => q.id === params.id);
+export default async function QuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const quotation = await getQuotationById(id);
   if (!quotation) return notFound();
 
-  const client = clients.find((c) => c.id === quotation.clientId);
-
-  function convertToInvoice() {
-    // Demo: in Phase 2 with Supabase this inserts into `invoices` + `invoice_items`
-    // copying the quotation lines, then marks the quotation as accepted.
-    toast.success(`${quotation!.number} converted to a draft invoice`);
-    router.push("/invoices");
-  }
+  const client = await getClientById(quotation.clientId);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -32,17 +22,7 @@ export default function QuotationDetailPage() {
         <Link href="/quotations" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to Quotations
         </Link>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="h-3.5 w-3.5" /> Export PDF
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => toast.success(`Sent to ${client?.email}`)}>
-            <Send className="h-3.5 w-3.5" /> Send
-          </Button>
-          <Button size="sm" onClick={convertToInvoice}>
-            <FileText className="h-3.5 w-3.5" /> Convert to Invoice
-          </Button>
-        </div>
+        <QuotationDetailActions quotationNumber={quotation.number} clientEmail={client?.email} />
       </div>
 
       <Card>

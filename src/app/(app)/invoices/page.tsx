@@ -2,8 +2,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { InvoiceTable } from "@/components/invoices/invoice-table";
+import { getInvoices } from "@/lib/data/invoices";
 
-export default function InvoicesPage() {
+export default async function InvoicesPage() {
+  const invoices = await getInvoices();
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -17,7 +19,7 @@ export default function InvoicesPage() {
           </Link>
         </Button>
       </div>
-      <InvoiceTable />
+      <InvoiceTable invoices={invoices} />
     </div>
   );
 }

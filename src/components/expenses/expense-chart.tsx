@@ -2,11 +2,11 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { expenses } from "@/lib/mock-data";
+import type { Expense } from "@/types";
 
 const palette = ["#2F6BFF", "#4C82FF", "#6B99FF", "#89AFFF", "#A7C5FF"];
 
-export function ExpenseChart() {
+export function ExpenseChart({ expenses }: { expenses: Expense[] }) {
   const byCategory = Object.values(
     expenses.reduce<Record<string, { category: string; amount: number }>>((acc, e) => {
       acc[e.category] = acc[e.category] ?? { category: e.category, amount: 0 };

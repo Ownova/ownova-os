@@ -42,6 +42,22 @@ function rowToClient(row: ClientRow): Client {
   };
 }
 
+export async function getClientById(id: string): Promise<Client | undefined> {
+  if (!isAwsDbConfigured) return mockClients.find((c) => c.id === id);
+  const rows = await query<ClientRow>(
+    `select c.id, c.name, c.email, c.phone, c.stage, c.value, c.tags,
+            c.last_activity_at, c.created_at,
+            comp.name as company_name,
+            u.full_name as owner_name
+     from clients c
+     left join companies comp on comp.id = c.company_id
+     left join users u on u.id = c.owner_id
+     where c.id = :id`,
+    { id }
+  );
+  return rows[0] ? rowToClient(rows[0]) : undefined;
+}
+
 export async function getClients(): Promise<Client[]> {
   if (!isAwsDbConfigured) return mockClients;
 

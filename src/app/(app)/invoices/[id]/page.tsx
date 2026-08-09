@@ -1,15 +1,12 @@
-"use client";
-
-import { notFound, useParams } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Printer, Send } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { invoices, clients } from "@/lib/mock-data";
 import { agency } from "@/lib/agency";
 import { formatCurrency, formatDate, amountInWords } from "@/lib/utils";
 import { OwnovaMark } from "@/components/brand/logo";
-import { toast } from "sonner";
+import { getInvoiceById } from "@/lib/data/invoices";
+import { InvoiceDetailActions } from "@/components/invoices/invoice-detail-actions";
 
 const statusLabel: Record<string, string> = {
   draft: "Draft",
@@ -24,14 +21,13 @@ function billingPeriodLabel(issueDate: string) {
   return new Date(issueDate).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
-export default function InvoiceDetailPage() {
-  const params = useParams<{ id: string }>();
-  const invoice = invoices.find((i) => i.id === params.id);
+export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const invoice = await getInvoiceById(id);
   if (!invoice) return notFound();
 
-  const client = clients.find((c) => c.id === invoice.clientId);
-  const clientPhone = invoice.clientPhone ?? client?.phone;
-  const clientEmail = invoice.clientEmail ?? client?.email;
+  const clientPhone = invoice.clientPhone;
+  const clientEmail = invoice.clientEmail;
   const subtotal = invoice.items.reduce((sum, i) => sum + i.quantity * i.rate - i.discount, 0);
   const discount = invoice.items.reduce((sum, i) => sum + i.discount, 0);
   const tax = invoice.items.reduce((sum, i) => sum + i.tax, 0);
@@ -43,14 +39,7 @@ export default function InvoiceDetailPage() {
         <Link href="/invoices" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to Invoices
         </Link>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="h-3.5 w-3.5" /> Export PDF
-          </Button>
-          <Button size="sm" onClick={() => toast.success(`Emailed ${invoice.number} to ${clientEmail}`)}>
-            <Send className="h-3.5 w-3.5" /> Send to Client
-          </Button>
-        </div>
+        <InvoiceDetailActions invoiceNumber={invoice.number} clientEmail={clientEmail} />
       </div>
 
       <Card>

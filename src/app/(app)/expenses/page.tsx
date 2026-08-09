@@ -4,10 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ExpenseChart } from "@/components/expenses/expense-chart";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { expenses } from "@/lib/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getExpenses } from "@/lib/data/expenses";
 
-export default function ExpensesPage() {
+export default async function ExpensesPage() {
+  const expenses = await getExpenses();
   const total = expenses.reduce((s, e) => s + e.amount, 0);
   const categories = new Set(expenses.map((e) => e.category)).size;
   const largest = [...expenses].sort((a, b) => b.amount - a.amount)[0];
@@ -30,7 +31,7 @@ export default function ExpensesPage() {
         <StatCard label="Largest Expense" value={formatCurrency(largest.amount)} icon={Calendar} />
       </div>
 
-      <ExpenseChart />
+      <ExpenseChart expenses={expenses} />
 
       <div className="rounded-xl border border-border">
         <Table>

@@ -3,9 +3,9 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { quotations } from "@/lib/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { QuotationStatus } from "@/types";
+import { getQuotations } from "@/lib/data/quotations";
 
 const statusVariant: Record<QuotationStatus, "secondary" | "default" | "success" | "warning" | "destructive"> = {
   draft: "secondary",
@@ -15,7 +15,8 @@ const statusVariant: Record<QuotationStatus, "secondary" | "default" | "success"
   expired: "warning",
 };
 
-export default function QuotationsPage() {
+export default async function QuotationsPage() {
+  const quotations = await getQuotations();
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">

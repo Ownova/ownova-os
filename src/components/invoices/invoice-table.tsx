@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { invoices } from "@/lib/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { InvoiceStatus } from "@/types";
+import type { Invoice, InvoiceStatus } from "@/types";
 
 const statusVariant: Record<InvoiceStatus, "secondary" | "default" | "success" | "warning" | "destructive"> = {
   draft: "secondary",
@@ -16,7 +15,7 @@ const statusVariant: Record<InvoiceStatus, "secondary" | "default" | "success" |
   overdue: "destructive",
 };
 
-export function InvoiceTable() {
+export function InvoiceTable({ invoices }: { invoices: Invoice[] }) {
   return (
     <div className="rounded-xl border border-border">
       <Table>

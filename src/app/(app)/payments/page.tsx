@@ -2,9 +2,10 @@ import { Wallet, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { payments, invoices } from "@/lib/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Payment } from "@/types";
+import { getPayments } from "@/lib/data/payments";
+import { getInvoices } from "@/lib/data/invoices";
 
 const statusVariant: Record<Payment["status"], "success" | "default" | "warning" | "secondary" | "destructive"> = {
   paid: "success",
@@ -23,7 +24,8 @@ const methodLabel: Record<Payment["method"], string> = {
   cash: "Cash",
 };
 
-export default function PaymentsPage() {
+export default async function PaymentsPage() {
+  const [payments, invoices] = await Promise.all([getPayments(), getInvoices()]);
   const collected = payments.filter((p) => p.status === "paid" || p.status === "partial").reduce((s, p) => s + p.amount, 0);
   const pending = payments.filter((p) => p.status === "pending").reduce((s, p) => s + p.amount, 0);
   const overdue = payments.filter((p) => p.status === "overdue").reduce((s, p) => s + p.amount, 0);

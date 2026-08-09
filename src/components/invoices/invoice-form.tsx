@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { clients, invoices } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
+import { createInvoiceAction } from "@/app/actions/invoices";
+import type { Client } from "@/types";
 
 const itemSchema = z.object({
   description: z.string().min(1, "Required"),
@@ -33,7 +34,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export function InvoiceForm() {
+export function InvoiceForm({ clients }: { clients: Client[] }) {
   const router = useRouter();
   const {
     register,
@@ -61,17 +62,9 @@ export function InvoiceForm() {
     return sum + afterDiscount + (item.tax || 0);
   }, 0);
 
-  function nextInvoiceNumber() {
-    const year = new Date().getFullYear();
-    const count = invoices.length + 1;
-    return `INV-${year}-${String(count).padStart(4, "0")}`;
-  }
-
   async function onSubmit(values: FormValues) {
-    // Demo mode: no backend wired up yet — this simulates creation.
-    // Swap for a Supabase insert into `invoices` / `invoice_items` once connected.
-    await new Promise((r) => setTimeout(r, 400));
-    toast.success(`${nextInvoiceNumber()} created for ${formatCurrency(total, values.currency)}`);
+    const result = await createInvoiceAction(values);
+    toast.success(`${result.number} created for ${formatCurrency(result.total, values.currency)}`);
     router.push("/invoices");
   }
 
