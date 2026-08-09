@@ -51,7 +51,9 @@ function toSqlParameters(params?: SqlParams): SqlParameter[] | undefined {
         ? { name, value: { longValue: value } }
         : { name, value: { doubleValue: value } };
     }
-    if (value instanceof Date) return { name, value: { stringValue: value.toISOString() } };
+    // Data API needs an explicit typeHint for timestamp comparisons, otherwise Postgres sees a
+    // plain text literal and errors with "operator does not exist: timestamp with time zone >= text".
+    if (value instanceof Date) return { name, value: { stringValue: value.toISOString() }, typeHint: "TIMESTAMP" };
     return { name, value: { stringValue: value } };
   });
 }

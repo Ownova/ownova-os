@@ -93,7 +93,7 @@ export async function getClientGrowth(): Promise<{ month: string; clients: numbe
   if (!isAwsDbConfigured) return mockClientGrowth;
 
   const months = last6MonthLabels();
-  const windowStart = new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1).toISOString();
+  const windowStart = new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1);
 
   const [[baseline], newClientRows] = await Promise.all([
     query<{ count: number }>(`select count(*)::int as count from clients where created_at < :windowStart`, { windowStart }),
