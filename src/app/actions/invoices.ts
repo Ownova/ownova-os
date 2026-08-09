@@ -2,6 +2,7 @@
 
 import { query, isAwsDbConfigured } from "@/lib/aws/db";
 import { nextInvoiceNumber } from "@/lib/data/invoices";
+import { requireInternalTeam } from "@/lib/auth-guard";
 
 interface CreateInvoiceItemInput {
   description: string;
@@ -30,6 +31,7 @@ export interface CreateInvoiceInput {
  * fixable, but worth revisiting with withUserContext()-style transactional writes later.
  */
 export async function createInvoiceAction(input: CreateInvoiceInput): Promise<{ number: string; total: number }> {
+  await requireInternalTeam();
   const number = await nextInvoiceNumber();
   const total = input.items.reduce((sum, item) => sum + item.quantity * item.rate - item.discount + item.tax, 0);
 

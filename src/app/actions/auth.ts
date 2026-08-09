@@ -5,13 +5,19 @@
 
 import { cognitoSignIn, cognitoSignUp, adminConfirmSignUp, isCognitoConfigured, decodeIdToken } from "@/lib/aws/cognito";
 import { upsertUserFromCognito } from "@/lib/data/users";
+import { setSessionCookie, clearSessionCookie } from "@/lib/session";
 
 export type AuthActionResult =
   | { mode: "cognito"; email: string; name: string; idToken: string; accessToken: string; refreshToken?: string }
   | { mode: "mock" };
 
 export async function signInAction(email: string, password: string): Promise<AuthActionResult> {
-  if (!isCognitoConfigured) return { mode: "mock" };
+  if (!isCognitoConfigured) {
+    // Mock/demo mode: no real identity, but still set a server session (role "admin") so
+    // role-gated UI like the Team page's role editor is visible while developing without AWS.
+    await setSessionCookie({ sub: "mock-user", email, name: email.split("@")[0], role: "admin", mode: "mock" });
+    return { mode: "mock" };
+  }
 
   const tokens = await cognitoSignIn(email, password);
   const claims = decodeIdToken(tokens.idToken);
@@ -19,11 +25,9 @@ export async function signInAction(email: string, password: string): Promise<Aut
 
   // Keep our `users` table in sync with Cognito on every sign-in — cheap upsert, and it means
   // there's never a chance of a dangling Cognito identity with no corresponding app-side row.
-  await upsertUserFromCognito({ id: claims.sub, email: claims.email ?? email, name }).catch(() => {
-    // Non-fatal: sign-in should still succeed even if the DB write fails (e.g. Aurora cold
-    // start taking longer than expected). Worst case, foreign keys referencing this user fail
-    // until the next successful sign-in retries the upsert.
-  });
+  const role = await upsertUserFromCognito({ id: claims.sub, email: claims.email ?? email, name }).catch(() => "developer");
+
+  await setSessionCookie({ sub: claims.sub, email: claims.email ?? email, name, role, mode: "cognito" });
 
   return {
     mode: "cognito",
@@ -33,6 +37,10 @@ export async function signInAction(email: string, password: string): Promise<Aut
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
   };
+}
+
+export async function signOutAction() {
+  await clearSessionCookie();
 }
 
 export async function signUpAction(name: string, email: string, password: string): Promise<AuthActionResult> {

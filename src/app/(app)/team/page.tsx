@@ -6,9 +6,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { initials } from "@/lib/utils";
 import { getTeamMembers } from "@/lib/data/team";
 import { getAllTasks } from "@/lib/data/projects";
+import { getServerSession } from "@/lib/session";
+import { RoleSelect } from "@/components/team/role-select";
 
 export default async function TeamPage() {
-  const [teamMembers, projectTasks] = await Promise.all([getTeamMembers(), getAllTasks()]);
+  const [teamMembers, projectTasks, session] = await Promise.all([getTeamMembers(), getAllTasks(), getServerSession()]);
+  const canEditRoles = session ? ["admin", "ceo"].includes(session.role) : false;
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -40,8 +43,8 @@ export default async function TeamPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Badge>{m.role}</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  {canEditRoles ? <RoleSelect userId={m.id} currentRole={m.role} /> : <Badge>{m.role}</Badge>}
                   <Badge variant="secondary">{m.department}</Badge>
                 </div>
 

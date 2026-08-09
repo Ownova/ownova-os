@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { initials } from "@/lib/utils";
 import { getSession, signOut } from "@/lib/auth";
+import { signOutAction } from "@/app/actions/auth";
 
 export function Topbar() {
   const router = useRouter();
@@ -23,8 +24,9 @@ export function Topbar() {
     if (session) setUserName(session.name);
   }, []);
 
-  function handleSignOut() {
+  async function handleSignOut() {
     signOut();
+    await signOutAction();
     router.push("/login");
   }
 

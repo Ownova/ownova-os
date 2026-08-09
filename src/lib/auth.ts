@@ -8,8 +8,6 @@ export interface Session {
   email: string;
   name: string;
   mode: "cognito" | "mock";
-  idToken?: string;
-  accessToken?: string;
 }
 
 /**
@@ -19,9 +17,11 @@ export interface Session {
  * { mode: "mock" } and this file falls back to a localStorage session so the app is fully
  * clickable without any AWS setup.
  *
- * Known Phase-1 simplification: Cognito tokens are cached in localStorage rather than an
- * httpOnly cookie. Fine for a demo; move to a cookie-based session (set via a Route Handler)
- * before handling real user data.
+ * Security note: the real session — including role and anything used for authorization — now
+ * lives server-side in an httpOnly cookie (see src/lib/session.ts), set by the server actions
+ * in src/app/actions/auth.ts. This localStorage copy is display-only (name/email, for the
+ * Topbar greeting before a server round-trip) and deliberately no longer carries Cognito tokens
+ * — client-side JS should never hold onto idToken/accessToken.
  */
 export async function signIn(email: string, password: string): Promise<Session> {
   const result = await signInAction(email, password);
@@ -40,7 +40,7 @@ function persist(
 ): Session {
   const session: Session =
     result.mode === "cognito"
-      ? { email: result.email, name: result.name, mode: "cognito", idToken: result.idToken, accessToken: result.accessToken }
+      ? { email: result.email, name: result.name, mode: "cognito" }
       : { email: fallbackEmail, name: fallbackName ?? fallbackEmail.split("@")[0] ?? "Ownova User", mode: "mock" };
 
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
