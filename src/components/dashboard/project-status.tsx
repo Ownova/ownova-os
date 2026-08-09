@@ -1,7 +1,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { projects } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
+import type { Project } from "@/types";
 
 const statusVariant: Record<string, "default" | "success" | "warning" | "secondary"> = {
   in_progress: "default",
@@ -11,7 +11,7 @@ const statusVariant: Record<string, "default" | "success" | "warning" | "seconda
   on_hold: "secondary",
 };
 
-export function ProjectStatusCards() {
+export function ProjectStatusCards({ projects }: { projects: Project[] }) {
   return (
     <Card>
       <CardHeader>

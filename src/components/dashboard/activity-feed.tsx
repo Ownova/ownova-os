@@ -1,6 +1,6 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { recentActivity } from "@/lib/mock-data";
 import { Receipt, Users, FolderKanban, ListChecks, Wallet } from "lucide-react";
+import type { ActivityItem } from "@/types";
 
 const iconMap = {
   invoice: Receipt,
@@ -10,7 +10,7 @@ const iconMap = {
   payment: Wallet,
 };
 
-export function ActivityFeed() {
+export function ActivityFeed({ recentActivity }: { recentActivity: ActivityItem[] }) {
   return (
     <Card>
       <CardHeader>

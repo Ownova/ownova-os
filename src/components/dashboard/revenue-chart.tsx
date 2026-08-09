@@ -2,9 +2,8 @@
 
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { revenueByMonth } from "@/lib/mock-data";
 
-export function RevenueChart() {
+export function RevenueChart({ revenueByMonth }: { revenueByMonth: { month: string; revenue: number; expenses: number }[] }) {
   return (
     <Card>
       <CardHeader>

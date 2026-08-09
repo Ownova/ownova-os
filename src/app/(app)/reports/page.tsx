@@ -4,10 +4,22 @@ import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { revenueByMonth, invoices, clients, projects, teamMembers, projectTasks } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
+import { getRevenueByMonth } from "@/lib/data/dashboard";
+import { getInvoices } from "@/lib/data/invoices";
+import { getClients } from "@/lib/data/clients";
+import { getProjects, getAllTasks } from "@/lib/data/projects";
+import { getTeamMembers } from "@/lib/data/team";
 
-export default function ReportsPage() {
+export default async function ReportsPage() {
+  const [revenueByMonth, invoices, clients, projects, teamMembers, projectTasks] = await Promise.all([
+    getRevenueByMonth(),
+    getInvoices(),
+    getClients(),
+    getProjects(),
+    getTeamMembers(),
+    getAllTasks(),
+  ]);
   const revenue = revenueByMonth.reduce((s, m) => s + m.revenue, 0);
   const expenses = revenueByMonth.reduce((s, m) => s + m.expenses, 0);
   const profit = revenue - expenses;
@@ -44,7 +56,7 @@ export default function ReportsPage() {
         <StatCard label="Outstanding" value={formatCurrency(outstanding)} icon={Wallet} />
       </div>
 
-      <RevenueChart />
+      <RevenueChart revenueByMonth={revenueByMonth} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>

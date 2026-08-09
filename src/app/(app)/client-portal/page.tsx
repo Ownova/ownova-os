@@ -3,15 +3,28 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { clients, invoices, projects } from "@/lib/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getClients, getClientById } from "@/lib/data/clients";
+import { getInvoices } from "@/lib/data/invoices";
+import { getProjects } from "@/lib/data/projects";
 
 // Preview of what a client sees when they log in. In Phase 4 this becomes a separate
 // route group gated by the `client` role + client_portal_access table (see 0001_init.sql).
 const PREVIEW_CLIENT_ID = "cl_2";
 
-export default function ClientPortalPage() {
-  const client = clients.find((c) => c.id === PREVIEW_CLIENT_ID)!;
+export default async function ClientPortalPage() {
+  const allClients = await getClients();
+  // Real DB mode has real UUIDs, not the "cl_2" mock id — fall back to the first client so the
+  // preview still renders something sensible once this module is wired to Aurora.
+  const previewId = allClients.some((c) => c.id === PREVIEW_CLIENT_ID) ? PREVIEW_CLIENT_ID : allClients[0]?.id;
+  const [client, invoices, projects] = await Promise.all([
+    previewId ? getClientById(previewId) : Promise.resolve(undefined),
+    getInvoices(),
+    getProjects(),
+  ]);
+  if (!client) {
+    return <p className="text-sm text-muted-foreground">No clients yet — add one in the CRM to preview the client portal.</p>;
+  }
   const clientInvoices = invoices.filter((i) => i.clientId === client.id);
   const clientProjects = projects.filter((p) => p.clientId === client.id);
 

@@ -2,9 +2,8 @@
 
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { clientGrowth } from "@/lib/mock-data";
 
-export function ClientGrowthChart() {
+export function ClientGrowthChart({ clientGrowth }: { clientGrowth: { month: string; clients: number }[] }) {
   return (
     <Card>
       <CardHeader>

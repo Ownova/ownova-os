@@ -5,11 +5,18 @@ import { ClientGrowthChart } from "@/components/dashboard/client-growth-chart";
 import { ProjectStatusCards } from "@/components/dashboard/project-status";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { AIInsightsPanel } from "@/components/dashboard/ai-insights";
-import { dashboardStats } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
+import { getDashboardStats, getRevenueByMonth, getClientGrowth, getRecentActivity } from "@/lib/data/dashboard";
+import { getProjects } from "@/lib/data/projects";
 
-export default function DashboardPage() {
-  const stats = dashboardStats();
+export default async function DashboardPage() {
+  const [stats, revenueByMonth, clientGrowth, recentActivity, projects] = await Promise.all([
+    getDashboardStats(),
+    getRevenueByMonth(),
+    getClientGrowth(),
+    getRecentActivity(),
+    getProjects(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -31,16 +38,16 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <RevenueChart />
-          <ClientGrowthChart />
+          <RevenueChart revenueByMonth={revenueByMonth} />
+          <ClientGrowthChart clientGrowth={clientGrowth} />
         </div>
         <div className="space-y-4">
           <AIInsightsPanel />
-          <ActivityFeed />
+          <ActivityFeed recentActivity={recentActivity} />
         </div>
       </div>
 
-      <ProjectStatusCards />
+      <ProjectStatusCards projects={projects} />
     </div>
   );
 }
