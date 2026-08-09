@@ -62,7 +62,17 @@ function fieldToJs(field: Field): unknown {
   if (field.longValue !== undefined) return field.longValue;
   if (field.doubleValue !== undefined) return field.doubleValue;
   if (field.booleanValue !== undefined) return field.booleanValue;
-  if (field.arrayValue) return field.arrayValue;
+  if (field.arrayValue) {
+    // Postgres array columns (e.g. text[] for tags/labels) come back as a nested ArrayValue
+    // object, not a plain JS array — unwrap whichever *Values list is populated.
+    const av = field.arrayValue;
+    if (av.stringValues) return av.stringValues;
+    if (av.longValues) return av.longValues;
+    if (av.doubleValues) return av.doubleValues;
+    if (av.booleanValues) return av.booleanValues;
+    if (av.arrayValues) return av.arrayValues.map((nested) => (nested ? fieldToJs({ arrayValue: nested }) : null));
+    return [];
+  }
   return null;
 }
 

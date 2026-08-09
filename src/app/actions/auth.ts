@@ -4,6 +4,7 @@
 // src/lib/auth.ts calls into these instead of talking to Cognito directly.
 
 import { cognitoSignIn, cognitoSignUp, adminConfirmSignUp, isCognitoConfigured, decodeIdToken } from "@/lib/aws/cognito";
+import { upsertUserFromCognito } from "@/lib/data/users";
 
 export type AuthActionResult =
   | { mode: "cognito"; email: string; name: string; idToken: string; accessToken: string; refreshToken?: string }
@@ -14,10 +15,20 @@ export async function signInAction(email: string, password: string): Promise<Aut
 
   const tokens = await cognitoSignIn(email, password);
   const claims = decodeIdToken(tokens.idToken);
+  const name = (claims.name as string) ?? email.split("@")[0];
+
+  // Keep our `users` table in sync with Cognito on every sign-in — cheap upsert, and it means
+  // there's never a chance of a dangling Cognito identity with no corresponding app-side row.
+  await upsertUserFromCognito({ id: claims.sub, email: claims.email ?? email, name }).catch(() => {
+    // Non-fatal: sign-in should still succeed even if the DB write fails (e.g. Aurora cold
+    // start taking longer than expected). Worst case, foreign keys referencing this user fail
+    // until the next successful sign-in retries the upsert.
+  });
+
   return {
     mode: "cognito",
     email: claims.email ?? email,
-    name: (claims.name as string) ?? email.split("@")[0],
+    name,
     idToken: tokens.idToken,
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,

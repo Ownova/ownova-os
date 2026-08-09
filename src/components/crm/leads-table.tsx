@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { clients as allClients } from "@/lib/mock-data";
 import { formatCurrency, formatDate, initials } from "@/lib/utils";
 import type { Client } from "@/types";
 
@@ -63,10 +62,10 @@ const columns = [
   }),
 ];
 
-export function LeadsTable() {
+export function LeadsTable({ clients }: { clients: Client[] }) {
   const [globalFilter, setGlobalFilter] = React.useState("");
   const table = useReactTable({
-    data: allClients,
+    data: clients,
     columns,
     state: { globalFilter },
     onGlobalFilterChange: setGlobalFilter,

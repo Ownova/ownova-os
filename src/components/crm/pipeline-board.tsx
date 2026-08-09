@@ -1,7 +1,6 @@
-import { clients } from "@/lib/mock-data";
 import { formatCurrency, initials } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { PipelineStage } from "@/types";
+import type { Client, PipelineStage } from "@/types";
 
 const stages: { key: PipelineStage; label: string }[] = [
   { key: "lead", label: "Lead" },
@@ -13,7 +12,7 @@ const stages: { key: PipelineStage; label: string }[] = [
   { key: "lost", label: "Lost" },
 ];
 
-export function PipelineBoard() {
+export function PipelineBoard({ clients }: { clients: Client[] }) {
   return (
     <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
       {stages.map((stage) => {

@@ -93,6 +93,8 @@ export interface Invoice {
   number: string;
   clientId: string;
   clientName: string;
+  clientPhone?: string;
+  clientEmail?: string;
   status: InvoiceStatus;
   currency: "USD" | "PKR" | "AED" | "EUR" | "GBP";
   issueDate: string;
@@ -100,6 +102,10 @@ export interface Invoice {
   items: InvoiceItem[];
   notes?: string;
   total: number;
+  /** e.g. "Growth Social Media Management Plan" — shown under the BILLING PERIOD card. */
+  serviceLabel?: string;
+  /** e.g. "Monthly Retainer + One-Time Setup" */
+  engagement?: string;
 }
 
 export interface Payment {

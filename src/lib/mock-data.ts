@@ -234,6 +234,43 @@ export const invoices: Invoice[] = [
     total: 3000,
   },
   {
+    id: "inv_6",
+    number: "OWNOVA-2026-002",
+    clientId: "cl_1",
+    clientName: "John (Mallae Car)",
+    clientPhone: "+971 58 553 6642",
+    clientEmail: "bai254497767@gmail.com",
+    status: "pending",
+    currency: "PKR",
+    issueDate: "2026-08-07",
+    dueDate: "2026-08-14",
+    serviceLabel: "Growth Social Media Management Plan",
+    engagement: "Monthly Retainer + One-Time Setup",
+    items: [
+      {
+        id: "i6a",
+        description:
+          "Growth Social Media Management Plan\n12 designed social media posts\n2 reels\nCaption writing\nHashtag research\nMonthly performance report",
+        quantity: 1,
+        rate: 75000,
+        discount: 0,
+        tax: 0,
+      },
+      {
+        id: "i6b",
+        description:
+          "Pixel Setup Code & Instructions\nTracking pixel implementation code with step-by-step installation instructions — one-time setup.",
+        quantity: 1,
+        rate: 37000,
+        discount: 0,
+        tax: 0,
+      },
+    ],
+    notes:
+      "Deliverables are scheduled across the billing month per the agreed content calendar. Revisions are included as per plan scope.",
+    total: 112000,
+  },
+  {
     id: "inv_5",
     number: "INV-2026-0005",
     clientId: "cl_2",

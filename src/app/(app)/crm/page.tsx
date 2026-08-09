@@ -3,8 +3,10 @@ import { LeadsTable } from "@/components/crm/leads-table";
 import { PipelineBoard } from "@/components/crm/pipeline-board";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { getClients } from "@/lib/data/clients";
 
-export default function CRMPage() {
+export default async function CRMPage() {
+  const clients = await getClients();
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -23,10 +25,10 @@ export default function CRMPage() {
           <TabsTrigger value="table">All Clients</TabsTrigger>
         </TabsList>
         <TabsContent value="pipeline">
-          <PipelineBoard />
+          <PipelineBoard clients={clients} />
         </TabsContent>
         <TabsContent value="table">
-          <LeadsTable />
+          <LeadsTable clients={clients} />
         </TabsContent>
       </Tabs>
     </div>

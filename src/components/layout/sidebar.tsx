@@ -16,9 +16,9 @@ import {
   Globe,
   BarChart3,
   Settings,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { OwnovaMark } from "@/components/brand/logo";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -43,9 +43,7 @@ export function Sidebar() {
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card/40 md:flex">
       <div className="flex h-14 items-center gap-2 border-b border-border px-5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary shadow-glow">
-          <Sparkles className="h-4 w-4 text-primary-foreground" />
-        </div>
+        <OwnovaMark size={22} />
         <span className="text-sm font-semibold tracking-tight">Ownova OS</span>
       </div>
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4">
