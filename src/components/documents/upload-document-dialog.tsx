@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { prepareDocumentUploadAction, recordDocumentAction } from "@/app/actions/documents";
 import { toastActionError } from "@/lib/action-toast";
+import type { Client } from "@/types";
 
 const FOLDERS = ["Contracts", "Invoices", "Quotations", "Brand Assets", "Client Files"];
 
@@ -17,11 +18,14 @@ const FOLDERS = ["Contracts", "Invoices", "Quotations", "Brand Assets", "Client 
  * Uploads straight from the browser to S3 using a presigned URL, then records the metadata row
  * only after the transfer succeeds. The file bytes never touch the app server.
  */
-export function UploadDocumentDialog() {
+export function UploadDocumentDialog({ clients = [] }: { clients?: Client[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [folder, setFolder] = useState(FOLDERS[0]);
+  // Empty means internal-only. Sharing has to be chosen deliberately: a file is never
+  // exposed to a client portal just because it landed in the "Client Files" folder.
+  const [clientId, setClientId] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleUpload() {
@@ -53,11 +57,13 @@ export function UploadDocumentDialog() {
         folder,
         storagePath,
         sizeBytes: file.size,
+        clientId: clientId || null,
       });
 
       toast.success(`${file.name} uploaded`);
       setOpen(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setClientId("");
       router.refresh();
     } catch (error) {
       toastActionError(error, "Upload failed.");
@@ -96,6 +102,27 @@ export function UploadDocumentDialog() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Share with client</Label>
+            <select
+              className="flex h-9 w-full rounded-lg border border-border bg-muted/40 px-3 text-sm"
+              value={clientId}
+              onChange={(event) => setClientId(event.target.value)}
+              disabled={clients.length === 0}
+            >
+              <option value="">Internal only — not visible to any client</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}{c.company ? ` — ${c.company}` : ""}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {clientId
+                ? "This file will appear under Shared Files in their portal."
+                : "Stays in the internal workspace."}
+            </p>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={isUploading}>

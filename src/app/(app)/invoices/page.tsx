@@ -4,10 +4,18 @@ import { Plus } from "lucide-react";
 import { InvoiceTable } from "@/components/invoices/invoice-table";
 import { getInvoices } from "@/lib/data/invoices";
 import { requireInternalPage } from "@/lib/auth-guard";
+import { markOverdueInvoices } from "@/lib/data/invoice-status";
+import { generateDueRecurringInvoices } from "@/lib/data/recurring-invoices";
 
 export default async function InvoicesPage() {
   await requireInternalPage();
 
+  // Flip anything past its due date before reading, so the list never shows a stale
+  // 'pending' on an invoice that lapsed days ago. Cheap: only touches wrong rows.
+  await markOverdueInvoices().catch(() => {});
+  // Retainers due this period appear as drafts. Failing here must not take the page down —
+  // being unable to see your invoices is worse than a schedule running a day late.
+  await generateDueRecurringInvoices().catch(() => {});
   const invoices = await getInvoices();
   return (
     <div className="space-y-5">

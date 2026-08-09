@@ -97,6 +97,7 @@ export default async function ClientPortalPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Due</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Balance</TableHead>
                     <TableHead className="text-right">PDF</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -112,6 +113,13 @@ export default async function ClientPortalPage() {
                       <TableCell>{formatDate(invoice.dueDate)}</TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(invoice.total, invoice.currency)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {invoice.total - (invoice.paid ?? 0) <= 0.01 ? (
+                          <span className="font-medium text-emerald-600 dark:text-emerald-400">Paid</span>
+                        ) : (
+                          formatCurrency(invoice.total - (invoice.paid ?? 0), invoice.currency)
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <a

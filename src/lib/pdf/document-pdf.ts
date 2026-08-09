@@ -290,8 +290,10 @@ export async function buildDocumentPdf(input: DocumentPdfInput): Promise<Uint8Ar
   }
   y -= 10;
 
-  // ---- payment details (invoices only) ----------------------------------------------------
-  if (isInvoice) {
+  // ---- payment details ---------------------------------------------------------------------
+  // Shown on quotations as well as invoices: accepting a quote usually means paying a deposit,
+  // and a client who has to email asking where to send the money is a client who pays late.
+  {
     ensure(90);
     page.drawRectangle({ x: M, y: y - 74, width: contentW, height: 74, borderColor: HAIRLINE, borderWidth: 1 });
     page.drawText("PAYMENT DETAILS", { x: M + 10, y: y - 16, size: 7, font: bold, color: MUTED });
@@ -322,7 +324,12 @@ export async function buildDocumentPdf(input: DocumentPdfInput): Promise<Uint8Ar
         "Work commences upon receipt of payment confirmation.",
         "All bank charges are to be borne by the client.",
       ]
-    : [];
+    : [
+        `This quotation is valid until ${input.secondaryDate} and is subject to revision thereafter.`,
+        "Prices are quoted in " + input.currency + " and exclude any applicable taxes or bank charges.",
+        "Work is scheduled upon written acceptance and receipt of the agreed advance.",
+        "Any scope added after acceptance is quoted separately before work begins.",
+      ];
 
   if (terms.length) {
     ensure(20 + terms.length * 11);

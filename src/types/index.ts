@@ -106,6 +106,10 @@ export interface Invoice {
   serviceLabel?: string;
   /** e.g. "Monthly Retainer + One-Time Setup" */
   engagement?: string;
+  /** Sum of payments marked 'paid' against this invoice. Drives the outstanding balance. */
+  paid?: number;
+  /** Set when this invoice repeats on a schedule. */
+  recurrence?: "monthly" | "quarterly" | "yearly";
 }
 
 export interface Payment {
@@ -132,6 +136,8 @@ export interface Quotation {
   number: string;
   clientId: string;
   clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
   status: QuotationStatus;
   currency: Invoice["currency"];
   issueDate: string;
@@ -157,6 +163,9 @@ export interface DocumentFile {
   uploadedBy: string;
   uploadedAt: string;
   version: number;
+  /** Set when the file is shared with a client — it then appears in that client's portal. */
+  sharedWithClientId?: string;
+  sharedWithClientName?: string;
 }
 
 export interface ActivityItem {

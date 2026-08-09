@@ -8,6 +8,11 @@ import { OwnovaMark } from "@/components/brand/logo";
 import { getInvoiceById } from "@/lib/data/invoices";
 import { InvoiceDetailActions } from "@/components/invoices/invoice-detail-actions";
 import { requireInternalPage } from "@/lib/auth-guard";
+import { getPaymentsByInvoice } from "@/lib/data/payments";
+import { SettlementPanel } from "@/components/invoices/settlement-panel";
+import { recalculateInvoiceStatus } from "@/lib/data/invoice-status";
+import { getInvoiceRecurrence } from "@/lib/data/recurring-invoices";
+import { RecurrenceControl } from "@/components/invoices/recurrence-control";
 
 const statusLabel: Record<string, string> = {
   draft: "Draft",
@@ -26,7 +31,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   await requireInternalPage();
 
   const { id } = await params;
-  const invoice = await getInvoiceById(id);
+  // Derive the status from the payment ledger before reading, so opening an invoice never shows a
+  // status contradicted by the payments listed right beneath it.
+  await recalculateInvoiceStatus(id).catch(() => {});
+  const [invoice, payments, recurrence] = await Promise.all([
+    getInvoiceById(id),
+    getPaymentsByInvoice(id),
+    getInvoiceRecurrence(id),
+  ]);
   if (!invoice) return notFound();
 
   const clientPhone = invoice.clientPhone;
@@ -44,6 +56,20 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         </Link>
         <InvoiceDetailActions invoiceId={invoice.id} invoiceNumber={invoice.number} />
       </div>
+
+      <RecurrenceControl
+        invoiceId={invoice.id}
+        interval={recurrence.interval}
+        nextAt={recurrence.nextAt}
+        isGenerated={recurrence.isGenerated}
+      />
+
+      <SettlementPanel
+        total={invoice.total}
+        currency={invoice.currency}
+        payments={payments}
+        status={invoice.status}
+      />
 
       <Card>
         <CardContent className="space-y-6 p-8 text-sm">

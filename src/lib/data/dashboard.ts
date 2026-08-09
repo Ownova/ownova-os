@@ -57,10 +57,15 @@ export async function getDashboardStats(): Promise<DashboardStats> {
        where p.status = 'paid'
        group by 1`
     ),
+    // Outstanding is what's still *owed*, not what was billed: a partially-paid invoice must
+    // contribute only its remaining balance, otherwise money already in the bank keeps counting
+    // as debt. greatest(...,0) guards against an over-payment dragging the figure negative.
     query<{ currency: string; total: number }>(
-      `select currency, coalesce(sum(total_amount), 0) as total from (
+      `select currency, coalesce(sum(greatest(total_amount - paid_amount, 0)), 0) as total from (
          select i.id, i.currency::text as currency,
-                sum(ii.quantity * ii.rate - ii.discount + ii.tax) as total_amount
+                sum(ii.quantity * ii.rate - ii.discount + ii.tax) as total_amount,
+                coalesce((select sum(p.amount) from payments p
+                          where p.invoice_id = i.id and p.status = 'paid'), 0) as paid_amount
          from invoices i join invoice_items ii on ii.invoice_id = i.id
          where i.status in ('pending', 'overdue', 'partially_paid')
          group by i.id, i.currency

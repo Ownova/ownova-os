@@ -70,6 +70,12 @@ const nextConfig: NextConfig = {
     DB_NAME: process.env.DB_NAME ?? "",
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME ?? "",
     SES_FROM_ADDRESS: process.env.SES_FROM_ADDRESS ?? "",
+    // Shared secrets for the intake endpoints. These are the only routes reachable without a
+    // Cognito session (Apps Script and Cal.com can't log in), so they authenticate with these.
+    // Server-side only — never referenced from a client component, so they are not shipped to
+    // the browser bundle.
+    INTAKE_SECRET: process.env.INTAKE_SECRET ?? "",
+    CAL_WEBHOOK_SECRET: process.env.CAL_WEBHOOK_SECRET ?? "",
   },
 };
 

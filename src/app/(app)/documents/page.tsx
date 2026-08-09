@@ -6,6 +6,7 @@ import { getDocuments } from "@/lib/data/documents";
 import { UploadDocumentDialog } from "@/components/documents/upload-document-dialog";
 import { DocumentDownloadButton } from "@/components/documents/document-download-button";
 import { requireInternalPage } from "@/lib/auth-guard";
+import { getClients } from "@/lib/data/clients";
 
 const folders = ["Contracts", "Invoices", "Quotations", "Brand Assets", "Client Files"] as const;
 
@@ -16,7 +17,7 @@ function formatSize(kb: number) {
 export default async function DocumentsPage() {
   await requireInternalPage();
 
-  const documents = await getDocuments();
+  const [documents, clients] = await Promise.all([getDocuments(), getClients()]);
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -24,7 +25,7 @@ export default async function DocumentsPage() {
           <h1 className="text-xl font-semibold tracking-tight">Documents</h1>
           <p className="text-sm text-muted-foreground">Contracts, invoices, brand assets, and client files.</p>
         </div>
-        <UploadDocumentDialog />
+        <UploadDocumentDialog clients={clients} />
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -61,6 +62,11 @@ export default async function DocumentsPage() {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              {d.sharedWithClientName && (
+                <Badge variant="success" title={`Visible in ${d.sharedWithClientName}'s portal`}>
+                  Shared · {d.sharedWithClientName}
+                </Badge>
+              )}
               <Badge variant="secondary">{d.folder}</Badge>
               <Badge variant="outline">v{d.version}</Badge>
               <DocumentDownloadButton documentId={d.id} fileName={d.name} />

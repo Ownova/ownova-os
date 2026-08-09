@@ -13,8 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
-import { createQuotationAction } from "@/app/actions/quotations";
-import type { Client } from "@/types";
+import { createQuotationAction, updateQuotationAction } from "@/app/actions/quotations";
+import type { Client, Quotation } from "@/types";
 import { toastActionError } from "@/lib/action-toast";
 
 const itemSchema = z.object({
@@ -36,9 +36,17 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-/** Mirrors InvoiceForm: quotations carry the same line-item shape, with validity instead of a due date. */
-export function QuotationForm({ clients }: { clients: Client[] }) {
+/**
+ * Mirrors InvoiceForm: quotations carry the same line-item shape, with validity instead of a due
+ * date.
+ *
+ * Serves both creating and editing. Passing `quotation` switches it to edit mode, which is what
+ * the automated pipeline depends on — a booking creates an empty draft and this is where you fill
+ * in the scope after the call.
+ */
+export function QuotationForm({ clients, quotation }: { clients: Client[]; quotation?: Quotation }) {
   const router = useRouter();
+  const isEditing = Boolean(quotation);
   const {
     register,
     control,
@@ -47,12 +55,31 @@ export function QuotationForm({ clients }: { clients: Client[] }) {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      currency: "USD",
-      issueDate: new Date().toISOString().slice(0, 10),
-      validUntil: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-      items: [{ description: "", quantity: 1, rate: 0, discount: 0, tax: 0 }],
-    },
+    defaultValues: quotation
+      ? {
+          clientId: quotation.clientId,
+          currency: quotation.currency,
+          issueDate: quotation.issueDate,
+          validUntil: quotation.validUntil,
+          terms: quotation.terms ?? "",
+          // A pipeline-created draft has no items yet, so start it with one blank row rather
+          // than an empty list the user can't type into.
+          items: quotation.items.length
+            ? quotation.items.map((i) => ({
+                description: i.description,
+                quantity: i.quantity,
+                rate: i.rate,
+                discount: i.discount,
+                tax: i.tax,
+              }))
+            : [{ description: "", quantity: 1, rate: 0, discount: 0, tax: 0 }],
+        }
+      : {
+          currency: "USD",
+          issueDate: new Date().toISOString().slice(0, 10),
+          validUntil: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+          items: [{ description: "", quantity: 1, rate: 0, discount: 0, tax: 0 }],
+        },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
@@ -66,11 +93,18 @@ export function QuotationForm({ clients }: { clients: Client[] }) {
 
   async function onSubmit(values: FormValues) {
     try {
+      if (quotation) {
+        const result = await updateQuotationAction({ ...values, id: quotation.id });
+        toast.success(`${result.number} updated — ${formatCurrency(result.total, values.currency)}`);
+        router.push(`/quotations/${quotation.id}`);
+        router.refresh();
+        return;
+      }
       const result = await createQuotationAction(values);
       toast.success(`${result.number} created for ${formatCurrency(result.total, values.currency)}`);
       router.push("/quotations");
     } catch (error) {
-      toastActionError(error, "Could not create this quotation.");
+      toastActionError(error, `Could not ${quotation ? "update" : "create"} this quotation.`);
     }
   }
 
@@ -199,11 +233,21 @@ export function QuotationForm({ clients }: { clients: Client[] }) {
       </Card>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => router.push("/quotations")}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.push(quotation ? `/quotations/${quotation.id}` : "/quotations")}
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create Quotation"}
+          {isSubmitting
+            ? isEditing
+              ? "Saving..."
+              : "Creating..."
+            : isEditing
+              ? "Save Quotation"
+              : "Create Quotation"}
         </Button>
       </div>
     </form>

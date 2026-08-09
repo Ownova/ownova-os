@@ -3,6 +3,7 @@
 import { query } from "@/lib/aws/db";
 import { requireInternalTeam } from "@/lib/auth-guard";
 import { logActivity } from "@/lib/data/activity";
+import { recalculateInvoiceStatus } from "@/lib/data/invoice-status";
 import { revalidatePath } from "next/cache";
 
 export interface CreateExpenseInput {
@@ -59,6 +60,10 @@ export async function createPaymentAction(input: CreatePaymentInput) {
     }
   );
 
+  // Recording money against an invoice must move the invoice's own status, otherwise the
+  // dashboard keeps reporting settled invoices as outstanding.
+  const settlement = await recalculateInvoiceStatus(input.invoiceId);
+
   await logActivity({
     actorId: session.mode === "cognito" ? session.sub : null,
     entityType: "payment",
@@ -67,5 +72,9 @@ export async function createPaymentAction(input: CreatePaymentInput) {
   });
 
   revalidatePath("/payments");
+  revalidatePath("/invoices");
+  revalidatePath(`/invoices/${input.invoiceId}`);
   revalidatePath("/dashboard");
+
+  return settlement;
 }

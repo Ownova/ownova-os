@@ -1,0 +1,157 @@
+import "server-only";
+import { query, isAwsDbConfigured } from "@/lib/aws/db";
+import { nextInvoiceNumber } from "@/lib/data/invoices";
+
+/**
+ * Generates the next copy of each recurring invoice that has come due.
+ *
+ * Run on demand (when the invoices list is opened) rather than from a scheduled job. That's a
+ * deliberate trade: it needs no EventBridge rule, no extra IAM surface and no second deployment
+ * target, and a retainer invoice that appears the first time someone looks at billing after the
+ * 1st is materially just as useful as one created at midnight. If billing ever needs to fire
+ * without anyone logged in, this same function is what a scheduled Lambda would call.
+ *
+ * Safety properties that matter here:
+ *   * Copies are created as `draft`. Nothing is ever sent to a client automatically — a human
+ *     still reviews and sends. An automated system that emails invoices unattended is one bug
+ *     away from billing a client twice.
+ *   * `recurrence_next_at` is advanced by exactly one period per generated invoice, in the same
+ *     statement batch, so a missed month yields one invoice rather than a catch-up backlog.
+ *   * Generated invoices carry no cadence of their own, so a copy can never start recurring.
+ */
+export type RecurrenceInterval = "monthly" | "quarterly" | "yearly";
+
+const INTERVAL_SQL: Record<RecurrenceInterval, string> = {
+  monthly: "1 month",
+  quarterly: "3 months",
+  yearly: "1 year",
+};
+
+interface DueRow {
+  id: string;
+  client_id: string;
+  project_id: string | null;
+  currency: string;
+  notes: string | null;
+  recurrence: RecurrenceInterval;
+  recurrence_next_at: string;
+  due_offset_days: number;
+}
+
+export async function generateDueRecurringInvoices(): Promise<number> {
+  if (!isAwsDbConfigured) return 0;
+
+  const due = await query<DueRow>(
+    `select i.id, i.client_id, i.project_id, i.currency::text as currency, i.notes,
+            i.recurrence::text as recurrence, i.recurrence_next_at,
+            greatest((i.due_date - i.issue_date), 0) as due_offset_days
+     from invoices i
+     where i.recurrence is not null
+       and i.recurrence_next_at is not null
+       and i.recurrence_next_at <= current_date
+     order by i.recurrence_next_at`
+  );
+
+  let created = 0;
+
+  for (const row of due) {
+    // Advance the schedule first. If invoice creation then fails, the worst case is one skipped
+    // period that someone notices — far better than a loop that re-fires the same period on
+    // every page load and floods the client with duplicate invoices.
+    await query(
+      `update invoices
+         set recurrence_next_at = recurrence_next_at + interval '${INTERVAL_SQL[row.recurrence]}'
+       where id = :sourceId`,
+      { sourceId: row.id }
+    );
+
+    const number = await nextInvoiceNumber();
+
+    const [inserted] = await query<{ id: string }>(
+      `insert into invoices
+         (client_id, project_id, number, status, currency, issue_date, due_date, notes,
+          recurring_source_id)
+       values (:clientId, :projectId, :number, 'draft'::invoice_status, :currency::currency_code,
+               :issueDate, :issueDate::date + :dueOffset * interval '1 day', :notes, :sourceId)
+       returning id`,
+      {
+        clientId: row.client_id,
+        projectId: row.project_id,
+        number,
+        currency: row.currency,
+        issueDate: row.recurrence_next_at,
+        dueOffset: row.due_offset_days,
+        notes: row.notes,
+        sourceId: row.id,
+      }
+    );
+    if (!inserted) continue;
+
+    // Line items are copied in the database rather than round-tripped through the app, so the
+    // copy is an exact duplicate of what was billed last period.
+    await query(
+      `insert into invoice_items (invoice_id, description, quantity, rate, discount, tax)
+       select :newId, description, quantity, rate, discount, tax
+       from invoice_items where invoice_id = :sourceId`,
+      { newId: inserted.id, sourceId: row.id }
+    );
+
+    created += 1;
+  }
+
+  return created;
+}
+
+/** Turns an invoice into a recurring one, or clears the cadence when interval is null. */
+export async function setInvoiceRecurrence(
+  invoiceId: string,
+  interval: RecurrenceInterval | null
+): Promise<void> {
+  if (!isAwsDbConfigured) return;
+
+  if (!interval) {
+    await query(
+      `update invoices set recurrence = null, recurrence_next_at = null where id = :invoiceId`,
+      { invoiceId }
+    );
+    return;
+  }
+
+  // The first copy is due one full period after this invoice's issue date — billing the same
+  // period twice is the obvious failure mode here.
+  await query(
+    `update invoices
+       set recurrence = :interval::invoice_recurrence,
+           recurrence_next_at = issue_date + interval '${INTERVAL_SQL[interval]}'
+     where id = :invoiceId
+       and recurring_source_id is null`,
+    { invoiceId, interval }
+  );
+}
+
+export interface RecurrenceInfo {
+  interval: RecurrenceInterval | null;
+  nextAt: string | null;
+  /** True when this invoice was itself generated by a recurring schedule. */
+  isGenerated: boolean;
+}
+
+export async function getInvoiceRecurrence(invoiceId: string): Promise<RecurrenceInfo> {
+  if (!isAwsDbConfigured) return { interval: null, nextAt: null, isGenerated: false };
+
+  const [row] = await query<{
+    recurrence: string | null;
+    recurrence_next_at: string | null;
+    recurring_source_id: string | null;
+  }>(
+    `select recurrence::text as recurrence, recurrence_next_at, recurring_source_id
+     from invoices where id = :invoiceId`,
+    { invoiceId }
+  );
+
+  return {
+    interval: (row?.recurrence as RecurrenceInterval) ?? null,
+    nextAt: row?.recurrence_next_at ?? null,
+    isGenerated: Boolean(row?.recurring_source_id),
+  };
+}

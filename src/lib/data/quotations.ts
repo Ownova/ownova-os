@@ -7,6 +7,8 @@ interface QuotationItemRow {
   number: string;
   client_id: string;
   client_name: string;
+  client_email: string | null;
+  client_phone: string | null;
   status: string;
   currency: string;
   issue_date: string;
@@ -22,6 +24,7 @@ interface QuotationItemRow {
 
 const QUOTATION_SELECT = `
   select q.id as quotation_id, q.number, q.client_id, c.name as client_name,
+         c.email as client_email, c.phone as client_phone,
          q.status, q.currency, q.issue_date, q.valid_until, q.terms,
          qi.id as item_id, qi.description as item_description, qi.quantity, qi.rate, qi.discount, qi.tax
   from quotations q
@@ -38,6 +41,8 @@ function groupQuotationRows(rows: QuotationItemRow[]): Quotation[] {
         number: row.number,
         clientId: row.client_id,
         clientName: row.client_name,
+        clientEmail: row.client_email ?? undefined,
+        clientPhone: row.client_phone ?? undefined,
         status: row.status as Quotation["status"],
         currency: row.currency as Quotation["currency"],
         issueDate: row.issue_date,

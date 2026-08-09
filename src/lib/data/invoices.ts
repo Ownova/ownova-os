@@ -14,6 +14,8 @@ interface InvoiceItemRow {
   issue_date: string;
   due_date: string;
   notes: string | null;
+  paid: number | null;
+  recurrence: string | null;
   item_id: string | null;
   item_description: string | null;
   quantity: number | null;
@@ -26,6 +28,9 @@ const INVOICE_SELECT = `
   select i.id as invoice_id, i.number, i.client_id, c.name as client_name,
          c.phone as client_phone, c.email as client_email,
          i.status, i.currency, i.issue_date, i.due_date, i.notes,
+         i.recurrence::text as recurrence,
+         coalesce((select sum(p.amount) from payments p
+                   where p.invoice_id = i.id and p.status = 'paid'), 0) as paid,
          ii.id as item_id, ii.description as item_description, ii.quantity, ii.rate, ii.discount, ii.tax
   from invoices i
   join clients c on c.id = i.client_id
@@ -50,6 +55,8 @@ function groupInvoiceRows(rows: InvoiceItemRow[]): Invoice[] {
         items: [],
         notes: row.notes ?? undefined,
         total: 0,
+        paid: Number(row.paid ?? 0),
+        recurrence: (row.recurrence as Invoice["recurrence"]) ?? undefined,
       };
       byId.set(row.invoice_id, inv);
     }

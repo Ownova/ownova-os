@@ -48,6 +48,12 @@ export interface RecordDocumentInput {
   folder: string;
   storagePath: string;
   sizeBytes: number;
+  /**
+   * Optional client to share the file with. When set, the document becomes visible in that
+   * client's portal; left empty it stays internal. Nothing is shared by accident -- sharing is an
+   * explicit choice at upload time.
+   */
+  clientId?: string | null;
 }
 
 /**
@@ -60,10 +66,22 @@ export async function recordDocumentAction(input: RecordDocumentInput): Promise<
   if (!isAwsDbConfigured) return;
   if (!ALLOWED_FOLDERS.includes(input.folder as Folder)) throw new Error("Unknown folder.");
 
+  const clientId = input.clientId?.trim() || null;
+  if (clientId) {
+    // Verify the client exists before attaching. A bad id would otherwise create an orphaned
+    // document that no portal can ever reach and no internal view explains.
+    const [client] = await query<{ id: string }>(`select id from clients where id = :clientId`, {
+      clientId,
+    });
+    if (!client) throw new Error("That client no longer exists.");
+  }
+
   await query(
-    `insert into documents (owner_type, name, folder, storage_path, size_kb, uploaded_by, version)
-     values ('general', :name, :folder::document_folder, :storagePath, :sizeKb, :uploadedBy, 1)`,
+    `insert into documents (owner_type, owner_id, name, folder, storage_path, size_kb, uploaded_by, version)
+     values (:ownerType, :ownerId, :name, :folder::document_folder, :storagePath, :sizeKb, :uploadedBy, 1)`,
     {
+      ownerType: clientId ? "client" : "general",
+      ownerId: clientId,
       name: input.name,
       folder: input.folder,
       storagePath: input.storagePath,
@@ -73,6 +91,7 @@ export async function recordDocumentAction(input: RecordDocumentInput): Promise<
   );
 
   revalidatePath("/documents");
+  revalidatePath("/portal");
 }
 
 /**

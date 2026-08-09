@@ -25,7 +25,11 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
         <Link href="/quotations" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to Quotations
         </Link>
-        <QuotationDetailActions quotationId={quotation.id} quotationNumber={quotation.number} />
+        <QuotationDetailActions
+          quotationId={quotation.id}
+          quotationNumber={quotation.number}
+          status={quotation.status}
+        />
       </div>
 
       <Card>

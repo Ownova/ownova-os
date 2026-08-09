@@ -47,6 +47,7 @@ interface InvoiceRow {
   currency: string;
   issue_date: string;
   due_date: string;
+  paid: number | null;
   item_id: string | null;
   description: string | null;
   quantity: number | null;
@@ -65,6 +66,8 @@ export async function getPortalInvoices(clientId: string): Promise<Invoice[]> {
   const rows = await query<InvoiceRow>(
     `select i.id, i.number, i.status::text as status, i.currency::text as currency,
             i.issue_date, i.due_date,
+            coalesce((select sum(p.amount) from payments p
+                      where p.invoice_id = i.id and p.status = 'paid'), 0) as paid,
             ii.id as item_id, ii.description, ii.quantity, ii.rate, ii.discount, ii.tax
      from invoices i
      left join invoice_items ii on ii.invoice_id = i.id
@@ -85,6 +88,10 @@ export async function getPortalInvoices(clientId: string): Promise<Invoice[]> {
         status: row.status as Invoice["status"],
         currency: row.currency as Invoice["currency"],
         issueDate: row.issue_date,
+        // Clients see what they still owe, not just what was billed -- a payment they made last
+        // week showing as an untouched balance is the fastest way to get a "did you receive it?"
+        // email.
+        paid: Number(row.paid ?? 0),
         dueDate: row.due_date,
         items: [],
         total: 0,

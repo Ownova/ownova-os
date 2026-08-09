@@ -52,7 +52,21 @@ ownova-os/
 ```
 
 Migrations are applied in order and are already live on the Aurora cluster. `0003` is what makes
-retainers repeat.
+retainers repeat; `0004` adds the lead intake pipeline.
+
+## One door for inbound leads
+
+`/api/intake/lead` and `/api/intake/booking` are the only routes in the app reachable without a
+Cognito session — Apps Script and Cal.com have no way to log in. Every outside system that
+creates a lead goes through them: the Google Form today, Cal.com bookings, and the lead scraper
+later. One place decides how an outside record becomes a row in `clients`, so when the mapping
+changes it changes once.
+
+Because they're the most exposed surface in the app they get their own shared secrets
+(`INTAKE_SECRET`, `CAL_WEBHOOK_SECRET`), constant-time comparison, and an idempotency table
+(`lead_intake`) keyed on the sender's own event ID — webhooks retry, and without that a single
+retry produces a duplicate client, calendar event and quotation. Setup lives in
+`docs/LEAD-PIPELINE-SETUP.md`.
 
 ## Billing state is derived, not stored by hand
 
