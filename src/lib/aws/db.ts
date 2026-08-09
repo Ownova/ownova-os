@@ -53,7 +53,12 @@ function toSqlParameters(params?: SqlParams): SqlParameter[] | undefined {
     }
     // Data API needs an explicit typeHint for timestamp comparisons, otherwise Postgres sees a
     // plain text literal and errors with "operator does not exist: timestamp with time zone >= text".
-    if (value instanceof Date) return { name, value: { stringValue: value.toISOString() }, typeHint: "TIMESTAMP" };
+    // The TIMESTAMP typeHint requires SQL format ("YYYY-MM-DD HH:MM:SS.sss"), NOT ISO 8601 --
+    // passing toISOString() as-is (with "T" and "Z") fails with "Parse Error for TimeStamp".
+    if (value instanceof Date) {
+      const sqlTimestamp = value.toISOString().replace("T", " ").replace("Z", "");
+      return { name, value: { stringValue: sqlTimestamp }, typeHint: "TIMESTAMP" };
+    }
     return { name, value: { stringValue: value } };
   });
 }
