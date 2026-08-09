@@ -39,9 +39,19 @@ export class AuthError extends Error {
   }
 }
 
-export async function signIn(email: string, password: string): Promise<Session> {
+/**
+ * Returns a Session, or { mode: "needs-confirmation" } when the account exists but the email was
+ * never verified — the login page then shows the code-entry step rather than a dead-end error.
+ */
+export async function signIn(
+  email: string,
+  password: string
+): Promise<Session | { mode: "needs-confirmation"; email: string }> {
   const result = await signInAction(email, password);
-  if (!result.ok) throw new AuthError(result.message);
+  if (!result.ok) {
+    if ("needsConfirmation" in result) return { mode: "needs-confirmation", email: result.email };
+    throw new AuthError(result.message);
+  }
   return persist(result, email);
 }
 
@@ -64,7 +74,15 @@ export async function confirmSignUp(email: string, code: string, password: strin
   if (!confirmed.ok) throw new AuthError(confirmed.message);
 
   const result = await signInAction(email, password);
-  if (!result.ok) throw new AuthError(result.message);
+  if (!result.ok) {
+    // Verification succeeded but the sign-in didn't — surface that distinctly so the user isn't
+    // told their code was wrong when it wasn't.
+    throw new AuthError(
+      "needsConfirmation" in result
+        ? "Your email is verified. Please sign in again."
+        : result.message
+    );
+  }
   return persist(result, email);
 }
 

@@ -29,6 +29,10 @@ export type ActionFailure = { ok: false; message: string };
 export type SignInResult =
   | { ok: true; mode: "cognito"; email: string; name: string }
   | { ok: true; mode: "mock" }
+  // Signalled separately from a generic failure so the login page can show the code-entry step
+  // instead of a dead-end error. Someone who abandoned signup half-way has a valid account and a
+  // code sitting in their inbox, but previously no screen anywhere would accept it.
+  | { ok: false; needsConfirmation: true; email: string; message: string }
   | ActionFailure;
 
 export type SignUpResult =
@@ -95,6 +99,20 @@ export async function signInAction(email: string, password: string): Promise<Sig
 
     return { ok: true, mode: "cognito", email: claims.email ?? email, name };
   } catch (error) {
+    // Unconfirmed accounts are recoverable, not a dead end — resend the code and let the caller
+    // route the user into verification.
+    if ((error as { name?: string })?.name === "UserNotConfirmedException") {
+      await resendConfirmationCode(email).catch(() => {
+        // If the resend is rate-limited the user may still have a valid earlier code, so carry on
+        // to the verification step rather than blocking on it.
+      });
+      return {
+        ok: false,
+        needsConfirmation: true,
+        email,
+        message: "This email hasn't been verified yet. We've sent you a fresh code.",
+      };
+    }
     return { ok: false, message: toFriendlyMessage(error) };
   }
 }
