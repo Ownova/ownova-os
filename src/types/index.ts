@@ -38,6 +38,11 @@ export interface Client {
   tags: string[];
   lastActivity: string;
   createdAt: string;
+  /** Drives the outreach-compliance badge in CRM — cold email is not lawful everywhere. */
+  country?: string;
+  /** Where the lead came from: google_form, cal_booking, google_maps, manual. */
+  source?: string;
+  website?: string;
 }
 
 export type ProjectStatus = "planning" | "in_progress" | "review" | "completed" | "on_hold";

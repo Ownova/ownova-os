@@ -73,6 +73,9 @@ export async function POST(request: Request) {
       phone: pick(body, "phone", "whatsapp", "phonewhatsapp"),
       company: pick(body, "company", "companyname", "brand", "companybrandname"),
       website: pick(body, "website", "websiteinstagramlinkedin", "socials", "linkedin"),
+      country: pick(body, "country"),
+      address: pick(body, "address"),
+      industry: pick(body, "industry", "category"),
       notes: buildNotes(body),
       payload: body,
     });
@@ -103,7 +106,7 @@ export async function POST(request: Request) {
  * that makes the call worth having.
  */
 function buildNotes(body: Record<string, unknown>): string {
-  const skip = new Set(["source", "responseid", "externalid", "id", "secret"]);
+  const skip = new Set(["source", "responseid", "externalid", "id", "secret", "country", "address", "industry"]);
   const lines = Object.entries(body)
     .filter(([k, v]) => typeof v === "string" && v.trim() && !skip.has(k.toLowerCase()))
     .map(([k, v]) => `${k}: ${String(v).trim()}`);

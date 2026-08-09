@@ -24,6 +24,9 @@ interface ClientRow {
   last_activity_at: string | null;
   created_at: string;
   company_name: string | null;
+  country: string | null;
+  source: string | null;
+  website: string | null;
 }
 
 function rowToClient(row: ClientRow): Client {
@@ -39,6 +42,9 @@ function rowToClient(row: ClientRow): Client {
     tags: row.tags ?? [],
     lastActivity: row.last_activity_at ?? row.created_at,
     createdAt: row.created_at,
+    country: row.country ?? undefined,
+    source: row.source ?? undefined,
+    website: row.website ?? undefined,
   };
 }
 
@@ -46,7 +52,7 @@ export async function getClientById(id: string): Promise<Client | undefined> {
   if (!isAwsDbConfigured) return mockClients.find((c) => c.id === id);
   const rows = await query<ClientRow>(
     `select c.id, c.name, c.email, c.phone, c.stage, c.value, c.tags,
-            c.last_activity_at, c.created_at,
+            c.last_activity_at, c.created_at, c.country, c.source, c.website,
             comp.name as company_name,
             u.full_name as owner_name
      from clients c
@@ -63,7 +69,7 @@ export async function getClients(): Promise<Client[]> {
 
   const rows = await query<ClientRow>(
     `select c.id, c.name, c.email, c.phone, c.stage, c.value, c.tags,
-            c.last_activity_at, c.created_at,
+            c.last_activity_at, c.created_at, c.country, c.source, c.website,
             comp.name as company_name,
             u.full_name as owner_name
      from clients c

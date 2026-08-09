@@ -24,6 +24,10 @@ export interface IntakeLead {
   website?: string | null;
   /** Free-text extras (how they heard about us, socials, answers) written to the client note. */
   notes?: string | null;
+  /** Drives the outreach-compliance flag shown in CRM. See lib/intake/compliance.ts. */
+  country?: string | null;
+  address?: string | null;
+  industry?: string | null;
   payload?: unknown;
 }
 
@@ -105,6 +109,9 @@ export async function ingestLead(input: IntakeLead): Promise<IntakeResult | null
               website = coalesce(website, :website),
               company_id = coalesce(company_id, :companyId),
               source = coalesce(source, :source),
+              country = coalesce(country, :country),
+              address = coalesce(address, :address),
+              industry = coalesce(industry, :industry),
               last_activity_at = now()
         where id = :clientId`,
       {
@@ -112,13 +119,18 @@ export async function ingestLead(input: IntakeLead): Promise<IntakeResult | null
         website: input.website?.trim() || null,
         companyId,
         source: input.source,
+        country: input.country?.trim() || null,
+        address: input.address?.trim() || null,
+        industry: input.industry?.trim() || null,
         clientId,
       }
     );
   } else {
     const [created] = await query<{ id: string }>(
-      `insert into clients (name, email, phone, website, company_id, stage, source, last_activity_at)
-       values (:name, :email, :phone, :website, :companyId, 'lead'::pipeline_stage, :source, now())
+      `insert into clients (name, email, phone, website, company_id, stage, source,
+                            country, address, industry, last_activity_at)
+       values (:name, :email, :phone, :website, :companyId, 'lead'::pipeline_stage, :source,
+               :country, :address, :industry, now())
        returning id`,
       {
         name,
@@ -127,6 +139,9 @@ export async function ingestLead(input: IntakeLead): Promise<IntakeResult | null
         website: input.website?.trim() || null,
         companyId,
         source: input.source,
+        country: input.country?.trim() || null,
+        address: input.address?.trim() || null,
+        industry: input.industry?.trim() || null,
       }
     );
     if (!created) return null;

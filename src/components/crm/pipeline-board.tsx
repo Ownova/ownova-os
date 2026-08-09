@@ -1,4 +1,5 @@
 import { formatCurrency, initials } from "@/lib/utils";
+import { OutreachBadge } from "@/components/crm/outreach-badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { Client, PipelineStage } from "@/types";
 
@@ -36,7 +37,12 @@ export function PipelineBoard({ clients }: { clients: Client[] }) {
                       <p className="truncate text-xs text-muted-foreground">{c.company}</p>
                     </div>
                   </div>
-                  <p className="mt-2 text-sm font-semibold text-primary">{formatCurrency(c.value)}</p>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-1">
+                    <p className="text-sm font-semibold text-primary">{formatCurrency(c.value)}</p>
+                    {/* Scraped leads carry a country; hand-entered clients usually don't, and
+                        showing a red "no cold email" badge on an existing client would be noise. */}
+                    {c.source === "google_maps" && <OutreachBadge country={c.country} />}
+                  </div>
                 </div>
               ))}
               {items.length === 0 && (
