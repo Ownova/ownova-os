@@ -1,5 +1,3 @@
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -8,8 +6,12 @@ import { getTeamMembers } from "@/lib/data/team";
 import { getAllTasks } from "@/lib/data/projects";
 import { getServerSession } from "@/lib/session";
 import { RoleSelect } from "@/components/team/role-select";
+import { InviteMemberDialog } from "@/components/team/invite-member-dialog";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 export default async function TeamPage() {
+  await requireInternalPage();
+
   const [teamMembers, projectTasks, session] = await Promise.all([getTeamMembers(), getAllTasks(), getServerSession()]);
   const canEditRoles = session ? ["admin", "ceo"].includes(session.role) : false;
   return (
@@ -19,9 +21,7 @@ export default async function TeamPage() {
           <h1 className="text-xl font-semibold tracking-tight">Team</h1>
           <p className="text-sm text-muted-foreground">Roles, departments, and current workload.</p>
         </div>
-        <Button size="sm">
-          <Plus className="h-4 w-4" /> Invite Member
-        </Button>
+        <InviteMemberDialog canAssignRoles={canEditRoles} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

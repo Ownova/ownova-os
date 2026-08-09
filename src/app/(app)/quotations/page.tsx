@@ -6,6 +6,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { QuotationStatus } from "@/types";
 import { getQuotations } from "@/lib/data/quotations";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 const statusVariant: Record<QuotationStatus, "secondary" | "default" | "success" | "warning" | "destructive"> = {
   draft: "secondary",
@@ -16,6 +17,8 @@ const statusVariant: Record<QuotationStatus, "secondary" | "default" | "success"
 };
 
 export default async function QuotationsPage() {
+  await requireInternalPage();
+
   const quotations = await getQuotations();
   return (
     <div className="space-y-5">

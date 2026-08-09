@@ -8,8 +8,11 @@ import { AIInsightsPanel } from "@/components/dashboard/ai-insights";
 import { formatCurrency } from "@/lib/utils";
 import { getDashboardStats, getRevenueByMonth, getClientGrowth, getRecentActivity } from "@/lib/data/dashboard";
 import { getProjects } from "@/lib/data/projects";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 export default async function DashboardPage() {
+  await requireInternalPage();
+
   const [stats, revenueByMonth, clientGrowth, recentActivity, projects] = await Promise.all([
     getDashboardStats(),
     getRevenueByMonth(),

@@ -2,8 +2,11 @@ import { ProjectsKanban } from "@/components/projects/kanban-board";
 import { getProjects } from "@/lib/data/projects";
 import { getClients } from "@/lib/data/clients";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 export default async function ProjectsPage() {
+  await requireInternalPage();
+
   const [projects, clients] = await Promise.all([getProjects(), getClients()]);
   return (
     <div className="space-y-5">

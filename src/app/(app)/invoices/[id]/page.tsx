@@ -7,6 +7,7 @@ import { formatCurrency, formatDate, amountInWords } from "@/lib/utils";
 import { OwnovaMark } from "@/components/brand/logo";
 import { getInvoiceById } from "@/lib/data/invoices";
 import { InvoiceDetailActions } from "@/components/invoices/invoice-detail-actions";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 const statusLabel: Record<string, string> = {
   draft: "Draft",
@@ -22,6 +23,8 @@ function billingPeriodLabel(issueDate: string) {
 }
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireInternalPage();
+
   const { id } = await params;
   const invoice = await getInvoiceById(id);
   if (!invoice) return notFound();

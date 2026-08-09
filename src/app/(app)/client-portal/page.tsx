@@ -7,12 +7,17 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { getClients, getClientById } from "@/lib/data/clients";
 import { getInvoices } from "@/lib/data/invoices";
 import { getProjects } from "@/lib/data/projects";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 // Preview of what a client sees when they log in. In Phase 4 this becomes a separate
 // route group gated by the `client` role + client_portal_access table (see 0001_init.sql).
 const PREVIEW_CLIENT_ID = "cl_2";
 
 export default async function ClientPortalPage() {
+  // Internal preview only: this page shows an arbitrary client's data, so it must never be
+  // reachable by a "client" role account.
+  await requireInternalPage();
+
   const allClients = await getClients();
   // Real DB mode has real UUIDs, not the "cl_2" mock id — fall back to the first client so the
   // preview still renders something sensible once this module is wired to Aurora.
@@ -67,7 +72,11 @@ export default async function ClientPortalPage() {
                     <TableCell>{formatDate(i.dueDate)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(i.total, i.currency)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm"><Download className="h-3.5 w-3.5" /> PDF</Button>
+                      <Button variant="ghost" size="sm" asChild>
+                        <a href={`/api/invoices/${i.id}/pdf`} download={`${i.number}.pdf`}>
+                          <Download className="h-3.5 w-3.5" /> PDF
+                        </a>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -95,8 +104,15 @@ export default async function ClientPortalPage() {
           <Card>
             <CardHeader><CardTitle className="text-foreground text-base font-semibold">Quick Actions</CardTitle></CardHeader>
             <CardContent className="space-y-2 pt-0">
-              <Button variant="outline" className="w-full justify-start"><Upload className="h-4 w-4" /> Upload a file</Button>
-              <Button variant="outline" className="w-full justify-start"><MessageSquare className="h-4 w-4" /> Message the team</Button>
+              <Button variant="outline" className="w-full justify-start" disabled>
+                <Upload className="h-4 w-4" /> Upload a file
+              </Button>
+              <Button variant="outline" className="w-full justify-start" disabled>
+                <MessageSquare className="h-4 w-4" /> Message the team
+              </Button>
+              <p className="pt-1 text-xs text-muted-foreground">
+                Client uploads and messaging arrive with the per-client portal.
+              </p>
             </CardContent>
           </Card>
         </div>

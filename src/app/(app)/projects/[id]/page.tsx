@@ -7,8 +7,11 @@ import { TaskBoard } from "@/components/projects/task-board";
 import { formatCurrency, formatDate, initials } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getProjectById, getProjectTasks } from "@/lib/data/projects";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireInternalPage();
+
   const { id } = await params;
   const project = await getProjectById(id);
   if (!project) return notFound();

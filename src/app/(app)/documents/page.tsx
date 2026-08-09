@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/utils";
 import { getDocuments } from "@/lib/data/documents";
 import { UploadDocumentDialog } from "@/components/documents/upload-document-dialog";
 import { DocumentDownloadButton } from "@/components/documents/document-download-button";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 const folders = ["Contracts", "Invoices", "Quotations", "Brand Assets", "Client Files"] as const;
 
@@ -13,6 +14,8 @@ function formatSize(kb: number) {
 }
 
 export default async function DocumentsPage() {
+  await requireInternalPage();
+
   const documents = await getDocuments();
   return (
     <div className="space-y-5">

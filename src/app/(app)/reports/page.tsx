@@ -10,8 +10,11 @@ import { getInvoices } from "@/lib/data/invoices";
 import { getClients } from "@/lib/data/clients";
 import { getProjects, getAllTasks } from "@/lib/data/projects";
 import { getTeamMembers } from "@/lib/data/team";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 export default async function ReportsPage() {
+  await requireInternalPage();
+
   const [revenueByMonth, invoices, clients, projects, teamMembers, projectTasks] = await Promise.all([
     getRevenueByMonth(),
     getInvoices(),
@@ -42,17 +45,32 @@ export default async function ReportsPage() {
           <h1 className="text-xl font-semibold tracking-tight">Reports</h1>
           <p className="text-sm text-muted-foreground">Revenue, profitability, and performance across the agency.</p>
         </div>
+        {/* Was three dead buttons. Now one that works: CSV opens directly in Excel, Sheets and
+            Numbers, so separate "Excel" and "PDF" exports were redundant and non-functional. */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm"><FileDown className="h-3.5 w-3.5" /> PDF</Button>
-          <Button variant="outline" size="sm"><FileDown className="h-3.5 w-3.5" /> CSV</Button>
-          <Button variant="outline" size="sm"><FileDown className="h-3.5 w-3.5" /> Excel</Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/api/reports/csv" download>
+              <FileDown className="h-3.5 w-3.5" /> Export CSV
+            </a>
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total Revenue" value={formatCurrency(revenue)} icon={DollarSign} />
         <StatCard label="Total Expenses" value={formatCurrency(expenses)} icon={TrendingDown} />
-        <StatCard label="Net Profit" value={formatCurrency(profit)} icon={TrendingUp} trend={{ value: `${Math.round((profit / revenue) * 100)}% margin`, positive: true }} />
+        {/* Margin is undefined with no revenue (it rendered "NaN% margin" on a fresh account), and
+            a loss must not be coloured as a positive trend. */}
+        <StatCard
+          label="Net Profit"
+          value={formatCurrency(profit)}
+          icon={TrendingUp}
+          trend={
+            revenue > 0
+              ? { value: `${Math.round((profit / revenue) * 100)}% margin`, positive: profit >= 0 }
+              : undefined
+          }
+        />
         <StatCard label="Outstanding" value={formatCurrency(outstanding)} icon={Wallet} />
       </div>
 

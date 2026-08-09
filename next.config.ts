@@ -3,6 +3,46 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Baseline security headers. None of these were being sent, which left the app open to
+  // clickjacking (an attacker framing os.ownova.org inside their own page to harvest clicks),
+  // MIME-sniffing, and referrer leakage of internal URLs to third parties.
+  //
+  // Content-Security-Policy is the main defence-in-depth against XSS. 'unsafe-inline' and
+  // 'unsafe-eval' are required by Next's hydration and dev tooling respectively; tightening those
+  // needs nonce-based CSP, which is a larger change. Everything else is locked to same-origin,
+  // and `frame-ancestors 'none'` is the modern, header-level equivalent of X-Frame-Options.
+  async headers() {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      // Cognito (auth) and S3 (presigned uploads) are called directly from the browser.
+      "connect-src 'self' https://*.amazonaws.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      "upgrade-insecure-requests",
+    ].join("; ");
+
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: csp },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+          // Tells browsers to only ever reach this host over HTTPS, for two years.
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+        ],
+      },
+    ];
+  },
+
   // Amplify Hosting injects console/branch environment variables into the BUILD container only --
   // they are NOT present in the Next.js SSR runtime (the Lambda serving dynamic routes). Without
   // this passthrough, every `process.env.X` read in server code is undefined at request time, so

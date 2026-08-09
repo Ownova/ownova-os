@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { InvoiceTable } from "@/components/invoices/invoice-table";
 import { getInvoices } from "@/lib/data/invoices";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 export default async function InvoicesPage() {
+  await requireInternalPage();
+
   const invoices = await getInvoices();
   return (
     <div className="space-y-5">

@@ -7,6 +7,7 @@ import type { Payment } from "@/types";
 import { getPayments } from "@/lib/data/payments";
 import { getInvoices } from "@/lib/data/invoices";
 import { NewPaymentDialog } from "@/components/payments/new-payment-dialog";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 const statusVariant: Record<Payment["status"], "success" | "default" | "warning" | "secondary" | "destructive"> = {
   paid: "success",
@@ -26,6 +27,8 @@ const methodLabel: Record<Payment["method"], string> = {
 };
 
 export default async function PaymentsPage() {
+  await requireInternalPage();
+
   const [payments, invoices] = await Promise.all([getPayments(), getInvoices()]);
   const collected = payments.filter((p) => p.status === "paid" || p.status === "partial").reduce((s, p) => s + p.amount, 0);
   const pending = payments.filter((p) => p.status === "pending").reduce((s, p) => s + p.amount, 0);

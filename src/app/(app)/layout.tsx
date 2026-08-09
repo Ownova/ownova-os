@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { getServerSession } from "@/lib/session";
+import { getRecentActivity } from "@/lib/data/activity";
 
 // Every page in this group reads live data from Aurora and/or the session cookie, so none of them
 // can be meaningfully prerendered at build time. Without this, `next build` tries to statically
@@ -19,11 +20,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getServerSession();
   if (!session) redirect("/login");
 
+  // Feeds the topbar's notification bell. Failure is non-fatal — a missing activity list should
+  // never stop the whole app shell from rendering.
+  const notifications = await getRecentActivity(6).catch(() => []);
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Topbar />
+        <Topbar notifications={notifications} />
         <main className="flex-1 overflow-y-auto scrollbar-thin p-6">{children}</main>
       </div>
       <CommandPalette />

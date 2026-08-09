@@ -2,8 +2,11 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { QuotationForm } from "@/components/quotations/quotation-form";
 import { getClients } from "@/lib/data/clients";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 export default async function NewQuotationPage() {
+  await requireInternalPage();
+
   const clients = await getClients();
   return (
     <div className="mx-auto max-w-4xl space-y-5">

@@ -8,8 +8,11 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { getQuotationById } from "@/lib/data/quotations";
 import { getClientById } from "@/lib/data/clients";
 import { QuotationDetailActions } from "@/components/quotations/quotation-detail-actions";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 export default async function QuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireInternalPage();
+
   const { id } = await params;
   const quotation = await getQuotationById(id);
   if (!quotation) return notFound();

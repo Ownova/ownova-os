@@ -4,6 +4,7 @@ import { cn, formatDate } from "@/lib/utils";
 import type { CalendarEvent } from "@/types";
 import { getCalendarEvents } from "@/lib/data/calendar";
 import { NewEventDialog } from "@/components/calendar/new-event-dialog";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 const typeStyles: Record<CalendarEvent["type"], { label: string; dot: string; variant: "default" | "warning" | "destructive" | "secondary" }> = {
   meeting: { label: "Meeting", dot: "bg-primary", variant: "default" },
@@ -17,6 +18,8 @@ const YEAR = 2026;
 const MONTH = 7; // 0-indexed August
 
 export default async function CalendarPage() {
+  await requireInternalPage();
+
   const calendarEvents = await getCalendarEvents();
   const first = new Date(YEAR, MONTH, 1);
   const daysInMonth = new Date(YEAR, MONTH + 1, 0).getDate();

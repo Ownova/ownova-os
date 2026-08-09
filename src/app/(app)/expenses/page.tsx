@@ -6,8 +6,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getExpenses } from "@/lib/data/expenses";
 import { NewExpenseDialog } from "@/components/expenses/new-expense-dialog";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 export default async function ExpensesPage() {
+  await requireInternalPage();
+
   const expenses = await getExpenses();
   const total = expenses.reduce((s, e) => s + e.amount, 0);
   const categories = new Set(expenses.map((e) => e.category)).size;

@@ -7,6 +7,7 @@ import type { TaskPriority } from "@/types";
 import { getAllTasks, getProjects } from "@/lib/data/projects";
 import { getTeamMembers } from "@/lib/data/team";
 import { NewTaskDialog } from "@/components/projects/new-task-dialog";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 const priorityVariant: Record<TaskPriority, "secondary" | "default" | "warning" | "destructive"> = {
   low: "secondary",
@@ -16,6 +17,8 @@ const priorityVariant: Record<TaskPriority, "secondary" | "default" | "warning" 
 };
 
 export default async function TasksPage() {
+  await requireInternalPage();
+
   const [projectTasks, projects, teamMembers] = await Promise.all([getAllTasks(), getProjects(), getTeamMembers()]);
   return (
     <div className="space-y-5">

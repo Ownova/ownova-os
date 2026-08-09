@@ -6,7 +6,9 @@ import { getServerSession } from "@/lib/session";
 /** Streams a generated quotation PDF. Auth-gated for the same reason as the invoice route. */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession();
-  if (!session) return new NextResponse("Unauthorized", { status: 401 });
+  // Internal staff only. A "client" role account is authenticated too, so checking merely
+  // for a session would have let any signed-in client pull another client's billing document.
+  if (!session || session.role === "client") return new NextResponse("Unauthorized", { status: 401 });
 
   const { id } = await params;
   const quotation = await getQuotationById(id);

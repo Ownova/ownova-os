@@ -3,8 +3,11 @@ import { LeadsTable } from "@/components/crm/leads-table";
 import { PipelineBoard } from "@/components/crm/pipeline-board";
 import { getClients } from "@/lib/data/clients";
 import { NewClientDialog } from "@/components/crm/new-client-dialog";
+import { requireInternalPage } from "@/lib/auth-guard";
 
 export default async function CRMPage() {
+  await requireInternalPage();
+
   const clients = await getClients();
   return (
     <div className="space-y-5">
