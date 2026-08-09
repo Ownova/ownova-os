@@ -46,7 +46,7 @@ export async function createPaymentAction(input: CreatePaymentInput) {
 
   await query(
     `insert into payments (invoice_id, amount, method, status, paid_at)
-     values (:invoiceId, :amount, :method, :status, :paidAt)`,
+     values (:invoiceId, :amount, :method::payment_method, :status::payment_status, :paidAt)`,
     {
       invoiceId: input.invoiceId,
       amount: input.amount,

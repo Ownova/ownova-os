@@ -91,7 +91,14 @@ export async function signInAction(email: string, password: string): Promise<Sig
     // Keep our `users` table in sync with Cognito on every sign-in — cheap upsert, and it means
     // there's never a chance of a dangling Cognito identity with no corresponding app-side row.
     // Must run before the cookie is set: getServerSession reads the role from this row.
-    await upsertUserFromCognito({ id: claims.sub, email: claims.email ?? email, name }).catch(() => "developer");
+    //
+    // Failure is non-fatal (the user is legitimately authenticated either way), but it IS logged:
+    // this call previously swallowed its error silently, which hid a SQL type bug that stopped
+    // every user row — and therefore every role assignment — from ever being written.
+    await upsertUserFromCognito({ id: claims.sub, email: claims.email ?? email, name }).catch((err) => {
+      console.error("Failed to sync Cognito user into users table:", err);
+      return "developer";
+    });
 
     // Store the raw ID token — getServerSession verifies its signature against the pool's JWKS on
     // every read, so nothing here is taken on trust.

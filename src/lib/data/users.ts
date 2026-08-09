@@ -23,7 +23,7 @@ export async function upsertUserFromCognito(params: { id: string; email: string;
   const rows = await query<{ role: string }>(
     bootstrapRole
       ? `insert into users (id, full_name, email, role)
-         values (:id, :name, :email, :role)
+         values (:id, :name, :email, :role::user_role)
          on conflict (id) do update set full_name = excluded.full_name, email = excluded.email
          returning role`
       : `insert into users (id, full_name, email)
@@ -51,5 +51,5 @@ export async function getUserRole(userId: string): Promise<string> {
 
 export async function updateUserRole(userId: string, role: string) {
   if (!isAwsDbConfigured) return;
-  await query(`update users set role = :role where id = :userId`, { role, userId });
+  await query(`update users set role = :role::user_role where id = :userId`, { role, userId });
 }

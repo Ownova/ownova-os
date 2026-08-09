@@ -41,7 +41,7 @@ export async function createInvoiceAction(input: CreateInvoiceInput): Promise<{ 
 
   const rows = await query<{ id: string }>(
     `insert into invoices (client_id, number, status, currency, issue_date, due_date, notes)
-     values (:clientId, :number, 'draft', :currency, :issueDate, :dueDate, :notes)
+     values (:clientId, :number, 'draft', :currency::currency_code, :issueDate, :dueDate, :notes)
      returning id`,
     {
       clientId: input.clientId,

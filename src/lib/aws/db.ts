@@ -44,6 +44,15 @@ function getClient() {
 
 export type SqlParams = Record<string, string | number | boolean | null | Date | undefined>;
 
+/**
+ * Canonical UUID form (8-4-4-4-12 hex). Every id and foreign key in the schema is a Postgres
+ * `uuid`, and the Data API sends bare strings as `text` — Postgres refuses to compare or assign
+ * `text` to `uuid` ("column is of type uuid but expression is of type text"), so anything
+ * matching this shape is tagged with the UUID type hint. Handling it here rather than casting in
+ * each statement means new queries can't reintroduce the bug by forgetting a `::uuid`.
+ */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function toSqlParameters(params?: SqlParams): SqlParameter[] | undefined {
   if (!params) return undefined;
   return Object.entries(params).map(([name, value]) => {
@@ -53,6 +62,9 @@ function toSqlParameters(params?: SqlParams): SqlParameter[] | undefined {
       return Number.isInteger(value)
         ? { name, value: { longValue: value } }
         : { name, value: { doubleValue: value } };
+    }
+    if (typeof value === "string" && UUID_PATTERN.test(value)) {
+      return { name, value: { stringValue: value }, typeHint: "UUID" };
     }
     // Data API needs an explicit typeHint for timestamp comparisons, otherwise Postgres sees a
     // plain text literal and errors with "operator does not exist: timestamp with time zone >= text".

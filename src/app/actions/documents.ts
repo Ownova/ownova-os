@@ -62,7 +62,7 @@ export async function recordDocumentAction(input: RecordDocumentInput): Promise<
 
   await query(
     `insert into documents (owner_type, name, folder, storage_path, size_kb, uploaded_by, version)
-     values ('general', :name, :folder, :storagePath, :sizeKb, :uploadedBy, 1)`,
+     values ('general', :name, :folder::document_folder, :storagePath, :sizeKb, :uploadedBy, 1)`,
     {
       name: input.name,
       folder: input.folder,

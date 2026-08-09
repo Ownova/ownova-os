@@ -33,7 +33,7 @@ export async function createClientAction(input: CreateClientInput) {
 
   await query(
     `insert into clients (name, company_id, email, phone, stage, value)
-     values (:name, :companyId, :email, :phone, :stage, :value)`,
+     values (:name, :companyId, :email, :phone, :stage::pipeline_stage, :value)`,
     {
       name: input.name,
       companyId,

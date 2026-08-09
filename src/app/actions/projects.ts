@@ -51,7 +51,7 @@ export async function createTaskAction(input: CreateTaskInput) {
 
   await query(
     `insert into project_tasks (project_id, title, status, priority, assignee_id, due_date)
-     values (:projectId, :title, 'todo', :priority, :assigneeId, :dueDate)`,
+     values (:projectId, :title, 'todo', :priority::task_priority, :assigneeId, :dueDate)`,
     {
       projectId: input.projectId,
       title: input.title,

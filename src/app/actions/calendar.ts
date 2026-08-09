@@ -16,7 +16,7 @@ export async function createCalendarEventAction(input: CreateCalendarEventInput)
 
   await query(
     `insert into calendar_events (title, event_date, type, related_to, created_by)
-     values (:title, :eventDate, :type, :relatedTo, :createdBy)`,
+     values (:title, :eventDate, :type::calendar_event_type, :relatedTo, :createdBy)`,
     {
       title: input.title,
       eventDate: input.eventDate,

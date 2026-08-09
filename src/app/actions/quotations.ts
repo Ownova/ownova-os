@@ -49,7 +49,7 @@ export async function createQuotationAction(
 
   const rows = await query<{ id: string }>(
     `insert into quotations (client_id, number, status, currency, issue_date, valid_until, terms)
-     values (:clientId, :number, 'draft', :currency, :issueDate, :validUntil, :terms)
+     values (:clientId, :number, 'draft', :currency::currency_code, :issueDate, :validUntil, :terms)
      returning id`,
     {
       clientId: input.clientId,
@@ -128,7 +128,7 @@ export async function convertQuotationToInvoiceAction(
 
   const invoiceRows = await query<{ id: string }>(
     `insert into invoices (client_id, number, status, currency, issue_date, due_date, notes)
-     values (:clientId, :number, 'draft', :currency, :issueDate, :dueDate, :notes)
+     values (:clientId, :number, 'draft', :currency::currency_code, :issueDate, :dueDate, :notes)
      returning id`,
     {
       clientId: quotation.client_id,
