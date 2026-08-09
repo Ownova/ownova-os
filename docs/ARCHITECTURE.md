@@ -46,8 +46,28 @@ ownova-os/
       utils.ts        — cn(), currency/date formatting
     types/index.ts   — domain types shared by mock data, DB queries, and UI
   db/migrations/0001_init.sql  — full Postgres schema + RLS (run against Aurora)
+  db/migrations/0002_calendar_and_document_metadata.sql
+  db/migrations/0003_recurring_invoices.sql
   docs/ARCHITECTURE.md         — this file
 ```
+
+Migrations are applied in order and are already live on the Aurora cluster. `0003` is what makes
+retainers repeat.
+
+## Billing state is derived, not stored by hand
+
+Invoice status is computed from the payments ledger (`src/lib/data/invoice-status.ts`) rather
+than set manually. Logging a payment recalculates the invoice to `partially_paid` or `paid`;
+opening the invoices list sweeps anything past its due date to `overdue`. A stored status that
+someone forgets to update is worse than no status at all, so nothing in the UI writes a status
+that the payment ledger contradicts. `draft` and `cancelled` are the exceptions — those are
+editorial states the ledger never overrides.
+
+Recurring invoices (`src/lib/data/recurring-invoices.ts`) are generated on demand when the
+invoices list is opened, not from a scheduled job — no EventBridge rule, no extra IAM surface,
+no second deploy target. Copies are always created as **drafts** and never emailed
+automatically; a human still reviews and sends. If billing ever needs to fire with nobody
+logged in, a scheduled Lambda would call the same `generateDueRecurringInvoices()`.
 
 `supabase/` and `src/lib/supabase/` still exist as empty deprecated stubs — this sandbox
 couldn't delete them from the OneDrive-synced folder. Delete both yourself in Explorer.
