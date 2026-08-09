@@ -10,19 +10,22 @@ export interface CreateExpenseInput {
   description?: string;
   amount: number;
   spentOn: string;
+  /** Expenses previously had no currency, so they could only ever be counted as one unit. */
+  currency: string;
 }
 
 export async function createExpenseAction(input: CreateExpenseInput) {
   const session = await requireInternalTeam();
 
   await query(
-    `insert into expenses (category, description, amount, spent_on, created_by)
-     values (:category, :description, :amount, :spentOn, :createdBy)`,
+    `insert into expenses (category, description, amount, spent_on, created_by, currency)
+     values (:category, :description, :amount, :spentOn, :createdBy, :currency::currency_code)`,
     {
       category: input.category,
       description: input.description ?? null,
       amount: input.amount,
       spentOn: input.spentOn,
+      currency: input.currency,
       // mock mode's session.sub ("mock-user") isn't a real uuid — only pass it through for
       // real Cognito sessions, otherwise leave created_by null.
       createdBy: session.mode === "cognito" ? session.sub : null,

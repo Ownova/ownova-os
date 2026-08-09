@@ -1,11 +1,11 @@
 import { DollarSign, Wallet, Users, FolderKanban, UsersRound, ListChecks } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { MoneyStatCard } from "@/components/dashboard/money-stat-card";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { ClientGrowthChart } from "@/components/dashboard/client-growth-chart";
 import { ProjectStatusCards } from "@/components/dashboard/project-status";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { AIInsightsPanel } from "@/components/dashboard/ai-insights";
-import { formatCurrency } from "@/lib/utils";
 import { getDashboardStats, getRevenueByMonth, getClientGrowth, getRecentActivity } from "@/lib/data/dashboard";
 import { getProjects } from "@/lib/data/projects";
 import { requireInternalPage } from "@/lib/auth-guard";
@@ -29,9 +29,9 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
+        <MoneyStatCard
           label="Monthly Revenue"
-          value={formatCurrency(stats.monthlyRevenue)}
+          totals={stats.monthlyRevenue}
           icon={DollarSign}
           trend={
             stats.revenueChangePct === null
@@ -39,10 +39,10 @@ export default async function DashboardPage() {
               : { value: `${Math.abs(stats.revenueChangePct).toFixed(1)}%`, positive: stats.revenueChangePct >= 0 }
           }
         />
-        <StatCard label="Annual Revenue" value={formatCurrency(stats.annualRevenue)} icon={DollarSign} />
-        <StatCard
+        <MoneyStatCard label="Annual Revenue" totals={stats.annualRevenue} icon={DollarSign} />
+        <MoneyStatCard
           label="Outstanding Payments"
-          value={formatCurrency(stats.outstanding)}
+          totals={stats.outstanding}
           icon={Wallet}
           trend={stats.overdueInvoices > 0 ? { value: `${stats.overdueInvoices} overdue`, positive: false } : undefined}
         />

@@ -1,5 +1,13 @@
 import { DollarSign, TrendingDown, TrendingUp, Wallet, FileDown } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { MoneyStatCard } from "@/components/dashboard/money-stat-card";
+import {
+  toCurrencyTotals,
+  subtractCurrencyTotals,
+  formatCurrencyTotals,
+  isMixedCurrency,
+  type CurrencyTotals,
+} from "@/lib/money";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -23,20 +31,34 @@ export default async function ReportsPage() {
     getTeamMembers(),
     getAllTasks(),
   ]);
-  const revenue = revenueByMonth.reduce((s, m) => s + m.revenue, 0);
-  const expenses = revenueByMonth.reduce((s, m) => s + m.expenses, 0);
-  const profit = revenue - expenses;
-  const outstanding = invoices
-    .filter((i) => ["pending", "overdue", "partially_paid"].includes(i.status))
-    .reduce((s, i) => s + i.total, 0);
+  // The revenue/expense chart is a single-series trend, so it stays numeric. Every headline
+  // money figure below is grouped by currency instead of summed -- see lib/money.ts.
+  const chartRevenue = revenueByMonth.reduce((s, m) => s + m.revenue, 0);
+  const chartExpenses = revenueByMonth.reduce((s, m) => s + m.expenses, 0);
 
+  const revenueTotals = toCurrencyTotals(
+    invoices.filter((i) => i.status === "paid").map((i) => ({ currency: i.currency, amount: i.total }))
+  );
+  const outstandingTotals = toCurrencyTotals(
+    invoices
+      .filter((i) => ["pending", "overdue", "partially_paid"].includes(i.status))
+      .map((i) => ({ currency: i.currency, amount: i.total }))
+  );
+  const expenseTotals: CurrencyTotals = { USD: chartExpenses };
+  const profitTotals = subtractCurrencyTotals(revenueTotals, expenseTotals);
+
+  // Client revenue is ranked by paid invoices, keeping each client's own currency.
   const revenueByClient = clients
-    .map((c) => ({
-      name: c.company,
-      total: invoices.filter((i) => i.clientId === c.id).reduce((s, i) => s + i.total, 0),
-    }))
-    .filter((r) => r.total > 0)
-    .sort((a, b) => b.total - a.total);
+    .map((c) => {
+      const theirs = invoices.filter((i) => i.clientId === c.id);
+      return {
+        name: c.company,
+        totals: toCurrencyTotals(theirs.map((i) => ({ currency: i.currency, amount: i.total }))),
+        rank: theirs.reduce((s, i) => s + i.total, 0),
+      };
+    })
+    .filter((r) => r.rank > 0)
+    .sort((a, b) => b.rank - a.rank);
 
   return (
     <div className="space-y-5">
@@ -57,21 +79,26 @@ export default async function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Revenue" value={formatCurrency(revenue)} icon={DollarSign} />
-        <StatCard label="Total Expenses" value={formatCurrency(expenses)} icon={TrendingDown} />
+        <MoneyStatCard label="Revenue (paid)" totals={revenueTotals} icon={DollarSign} />
+        <MoneyStatCard label="Total Expenses" totals={expenseTotals} icon={TrendingDown} />
         {/* Margin is undefined with no revenue (it rendered "NaN% margin" on a fresh account), and
             a loss must not be coloured as a positive trend. */}
-        <StatCard
+        {/* Margin is only meaningful within one currency, so it is shown when the books are
+            single-currency and omitted otherwise rather than mixing units. */}
+        <MoneyStatCard
           label="Net Profit"
-          value={formatCurrency(profit)}
+          totals={profitTotals}
           icon={TrendingUp}
           trend={
-            revenue > 0
-              ? { value: `${Math.round((profit / revenue) * 100)}% margin`, positive: profit >= 0 }
+            !isMixedCurrency(revenueTotals) && chartRevenue > 0
+              ? {
+                  value: `${Math.round(((chartRevenue - chartExpenses) / chartRevenue) * 100)}% margin`,
+                  positive: chartRevenue - chartExpenses >= 0,
+                }
               : undefined
           }
         />
-        <StatCard label="Outstanding" value={formatCurrency(outstanding)} icon={Wallet} />
+        <MoneyStatCard label="Outstanding" totals={outstandingTotals} icon={Wallet} />
       </div>
 
       <RevenueChart revenueByMonth={revenueByMonth} />
@@ -91,7 +118,11 @@ export default async function ReportsPage() {
                 {revenueByClient.map((r) => (
                   <TableRow key={r.name}>
                     <TableCell>{r.name}</TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(r.total)}</TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrencyTotals(r.totals).map((v) => (
+                        <div key={v}>{v}</div>
+                      ))}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

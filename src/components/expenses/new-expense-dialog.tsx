@@ -26,6 +26,7 @@ export function NewExpenseDialog() {
         description: String(form.get("description") || "") || undefined,
         amount: Number(form.get("amount") || 0),
         spentOn: String(form.get("spentOn") || new Date().toISOString().slice(0, 10)),
+        currency: String(form.get("currency") || "USD"),
       });
       toast.success("Expense logged");
       setOpen(false);
@@ -58,6 +59,14 @@ export function NewExpenseDialog() {
             <Input id="description" name="description" />
           </div>
           <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="currency">Currency</Label>
+              <select id="currency" name="currency" defaultValue="USD" className="flex h-9 w-full rounded-lg border border-border bg-muted/40 px-3 text-sm">
+                {["USD", "PKR", "AED", "EUR", "GBP"].map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="amount">Amount</Label>
               <Input id="amount" name="amount" type="number" step="0.01" min="0" required />

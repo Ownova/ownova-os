@@ -415,10 +415,11 @@ export function dashboardStats() {
   const overdueInvoices = invoices.filter((i) => i.status === "overdue").length;
   const prevMonthRevenue = revenueByMonth[revenueByMonth.length - 2]?.revenue ?? 0;
 
+  // Mock mode mirrors the real shape: money keyed by currency, all USD here.
   return {
-    monthlyRevenue,
-    annualRevenue,
-    outstanding,
+    monthlyRevenue: { USD: monthlyRevenue },
+    annualRevenue: { USD: annualRevenue },
+    outstanding: { USD: outstanding },
     activeClients,
     activeProjects,
     teamMembers: teamMembers.length,

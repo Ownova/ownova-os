@@ -6,12 +6,15 @@ import {
   dashboardStats as mockDashboardStats,
 } from "@/lib/mock-data";
 import { getRecentActivity as getRecentActivityFromLog } from "@/lib/data/activity";
+import { toCurrencyTotals, type CurrencyTotals } from "@/lib/money";
 import type { ActivityItem } from "@/types";
 
 export interface DashboardStats {
-  monthlyRevenue: number;
-  annualRevenue: number;
-  outstanding: number;
+  // Money figures are kept per currency rather than summed. The agency invoices in USD, PKR,
+  // AED, EUR and GBP, and adding those together produces a meaningless number (see lib/money.ts).
+  monthlyRevenue: CurrencyTotals;
+  annualRevenue: CurrencyTotals;
+  outstanding: CurrencyTotals;
   activeClients: number;
   activeProjects: number;
   teamMembers: number;
@@ -32,8 +35,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   if (!isAwsDbConfigured) return mockDashboardStats();
 
   const [
-    [revenue],
-    [outstanding],
+    revenueRows,
+    outstandingRows,
     [clientsCount],
     [projectsCount],
     [teamCount],
@@ -41,22 +44,27 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     [overdueCount],
     [meetingsCount],
   ] = await Promise.all([
-    query<{ monthly: number; annual: number; prev_month: number }>(
-      `select
-         coalesce(sum(amount) filter (where date_trunc('month', paid_at) = date_trunc('month', now())), 0) as monthly,
-         coalesce(sum(amount) filter (where paid_at >= date_trunc('year', now())), 0) as annual,
-         coalesce(sum(amount) filter (
-           where date_trunc('month', paid_at) = date_trunc('month', now() - interval '1 month')
+    // Payments carry no currency of their own -- they inherit it from the invoice they settle,
+    // hence the join.
+    query<{ currency: string; monthly: number; annual: number; prev_month: number }>(
+      `select i.currency::text as currency,
+         coalesce(sum(p.amount) filter (where date_trunc('month', p.paid_at) = date_trunc('month', now())), 0) as monthly,
+         coalesce(sum(p.amount) filter (where p.paid_at >= date_trunc('year', now())), 0) as annual,
+         coalesce(sum(p.amount) filter (
+           where date_trunc('month', p.paid_at) = date_trunc('month', now() - interval '1 month')
          ), 0) as prev_month
-       from payments where status = 'paid'`
+       from payments p join invoices i on i.id = p.invoice_id
+       where p.status = 'paid'
+       group by 1`
     ),
-    query<{ total: number }>(
-      `select coalesce(sum(total_amount), 0) as total from (
-         select i.id, sum(ii.quantity * ii.rate - ii.discount + ii.tax) as total_amount
+    query<{ currency: string; total: number }>(
+      `select currency, coalesce(sum(total_amount), 0) as total from (
+         select i.id, i.currency::text as currency,
+                sum(ii.quantity * ii.rate - ii.discount + ii.tax) as total_amount
          from invoices i join invoice_items ii on ii.invoice_id = i.id
          where i.status in ('pending', 'overdue', 'partially_paid')
-         group by i.id
-       ) t`
+         group by i.id, i.currency
+       ) t group by currency`
     ),
     query<{ count: number }>(`select count(*)::int as count from clients where stage <> 'lost'`),
     query<{ count: number }>(`select count(*)::int as count from projects where status in ('in_progress', 'planning')`),
@@ -74,20 +82,36 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     ),
   ]);
 
-  const monthly = Number(revenue?.monthly ?? 0);
-  const prevMonth = Number(revenue?.prev_month ?? 0);
+  const monthlyRevenue = toCurrencyTotals(
+    revenueRows.map((r) => ({ currency: r.currency, amount: Number(r.monthly) }))
+  );
+  const annualRevenue = toCurrencyTotals(
+    revenueRows.map((r) => ({ currency: r.currency, amount: Number(r.annual) }))
+  );
+  const outstanding = toCurrencyTotals(
+    outstandingRows.map((r) => ({ currency: r.currency, amount: Number(r.total) }))
+  );
+
+  // The month-over-month trend only makes sense within a single currency, so it is computed for
+  // the currency with the largest current-month revenue and suppressed when books are mixed.
+  const byMonthly = [...revenueRows].sort((a, b) => Number(b.monthly) - Number(a.monthly));
+  const lead = byMonthly[0];
+  const leadMonthly = Number(lead?.monthly ?? 0);
+  const leadPrev = Number(lead?.prev_month ?? 0);
+  const singleCurrency = revenueRows.length <= 1;
 
   return {
-    monthlyRevenue: monthly,
-    annualRevenue: Number(revenue?.annual ?? 0),
-    outstanding: Number(outstanding?.total ?? 0),
+    monthlyRevenue,
+    annualRevenue,
+    outstanding,
     activeClients: clientsCount?.count ?? 0,
     activeProjects: projectsCount?.count ?? 0,
     teamMembers: teamCount?.count ?? 0,
     pendingTasks: tasksCount?.count ?? 0,
     overdueInvoices: overdueCount?.count ?? 0,
     upcomingMeetings: meetingsCount?.count ?? 0,
-    revenueChangePct: prevMonth > 0 ? ((monthly - prevMonth) / prevMonth) * 100 : null,
+    revenueChangePct:
+      singleCurrency && leadPrev > 0 ? ((leadMonthly - leadPrev) / leadPrev) * 100 : null,
   };
 }
 

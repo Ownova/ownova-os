@@ -1,7 +1,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
 import type { DashboardStats } from "@/lib/data/dashboard";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrencyTotals } from "@/lib/money";
 
 /**
  * Derives plain-language observations from the real numbers already loaded for the dashboard.
@@ -15,7 +15,7 @@ function buildInsights(stats: DashboardStats): string[] {
   if (stats.overdueInvoices > 0) {
     insights.push(
       `${stats.overdueInvoices} invoice${stats.overdueInvoices === 1 ? " is" : "s are"} past due, ` +
-        `totalling ${formatCurrency(stats.outstanding)} outstanding — worth a follow-up.`
+        `totalling ${formatCurrencyTotals(stats.outstanding).join(' and ')} outstanding — worth a follow-up.`
     );
   }
 
@@ -23,7 +23,7 @@ function buildInsights(stats: DashboardStats): string[] {
     const direction = stats.revenueChangePct >= 0 ? "up" : "down";
     insights.push(
       `Revenue is ${direction} ${Math.abs(stats.revenueChangePct).toFixed(1)}% versus last month ` +
-        `(${formatCurrency(stats.monthlyRevenue)} so far).`
+        `(${formatCurrencyTotals(stats.monthlyRevenue).join(' and ')} so far).`
     );
   }
 
