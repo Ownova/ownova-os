@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn, formatDate } from "@/lib/utils";
 import type { CalendarEvent } from "@/types";
 import { getCalendarEvents } from "@/lib/data/calendar";
+import { NewEventDialog } from "@/components/calendar/new-event-dialog";
 
 const typeStyles: Record<CalendarEvent["type"], { label: string; dot: string; variant: "default" | "warning" | "destructive" | "secondary" }> = {
   meeting: { label: "Meeting", dot: "bg-primary", variant: "default" },
@@ -32,9 +33,12 @@ export default async function CalendarPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Calendar</h1>
-        <p className="text-sm text-muted-foreground">Meetings, deadlines, invoice due dates, and tasks.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Calendar</h1>
+          <p className="text-sm text-muted-foreground">Meetings, deadlines, invoice due dates, and tasks.</p>
+        </div>
+        <NewEventDialog />
       </div>
 
       <div className="flex flex-wrap gap-3">

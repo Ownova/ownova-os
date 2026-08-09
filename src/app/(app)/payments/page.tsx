@@ -6,6 +6,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Payment } from "@/types";
 import { getPayments } from "@/lib/data/payments";
 import { getInvoices } from "@/lib/data/invoices";
+import { NewPaymentDialog } from "@/components/payments/new-payment-dialog";
 
 const statusVariant: Record<Payment["status"], "success" | "default" | "warning" | "secondary" | "destructive"> = {
   paid: "success",
@@ -33,9 +34,12 @@ export default async function PaymentsPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Payment Tracking</h1>
-        <p className="text-sm text-muted-foreground">Every payment against every invoice, by method and status.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Payment Tracking</h1>
+          <p className="text-sm text-muted-foreground">Every payment against every invoice, by method and status.</p>
+        </div>
+        <NewPaymentDialog invoices={invoices} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -2,7 +2,8 @@ import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
   SignUpCommand,
-  AdminConfirmSignUpCommand,
+  ConfirmSignUpCommand,
+  ResendConfirmationCodeCommand,
   GlobalSignOutCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 
@@ -72,13 +73,14 @@ export async function cognitoSignUp(name: string, email: string, password: strin
   );
 }
 
-/**
- * Dev convenience only: auto-confirms a new user instead of making them click an email link.
- * Requires the caller's IAM role to have cognito-idp:AdminConfirmSignUp on the user pool.
- * Ship a real "enter the code we emailed you" screen before going to production.
- */
-export async function adminConfirmSignUp(email: string) {
-  await getClient().send(new AdminConfirmSignUpCommand({ UserPoolId: userPoolId, Username: email }));
+/** Confirms a new sign-up with the 6-digit code Cognito emails the user. */
+export async function confirmSignUp(email: string, code: string) {
+  await getClient().send(new ConfirmSignUpCommand({ ClientId: clientId, Username: email, ConfirmationCode: code }));
+}
+
+/** Resends the confirmation code, e.g. when the user says they didn't get it. */
+export async function resendConfirmationCode(email: string) {
+  await getClient().send(new ResendConfirmationCodeCommand({ ClientId: clientId, Username: email }));
 }
 
 export async function cognitoSignOut(accessToken: string) {

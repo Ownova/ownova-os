@@ -1,6 +1,6 @@
 "use client";
 
-import { signInAction, signUpAction } from "@/app/actions/auth";
+import { signInAction, signUpAction, confirmSignUpAction, resendConfirmationCodeAction, type SignUpActionResult } from "@/app/actions/auth";
 
 const SESSION_KEY = "ownova_session";
 
@@ -28,9 +28,23 @@ export async function signIn(email: string, password: string): Promise<Session> 
   return persist(result, email);
 }
 
-export async function signUp(name: string, email: string, password: string): Promise<Session> {
+/** Returns a Session once signed in, or { mode: "needs-confirmation", email } if Cognito needs
+ *  the emailed code first — the signup page shows a code-entry step in that case. */
+export async function signUp(name: string, email: string, password: string): Promise<Session | { mode: "needs-confirmation"; email: string }> {
   const result = await signUpAction(name, email, password);
+  if (result.mode === "needs-confirmation") return result;
   return persist(result, email, name);
+}
+
+/** Confirms the emailed code, then signs in with the same credentials. */
+export async function confirmSignUp(email: string, code: string, password: string): Promise<Session> {
+  await confirmSignUpAction(email, code);
+  const result = await signInAction(email, password);
+  return persist(result, email);
+}
+
+export async function resendConfirmationCode(email: string): Promise<void> {
+  await resendConfirmationCodeAction(email);
 }
 
 function persist(

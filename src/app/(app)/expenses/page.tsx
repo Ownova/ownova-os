@@ -1,11 +1,11 @@
-import { Plus, TrendingDown, Calendar, Layers } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { TrendingDown, Calendar, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ExpenseChart } from "@/components/expenses/expense-chart";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getExpenses } from "@/lib/data/expenses";
+import { NewExpenseDialog } from "@/components/expenses/new-expense-dialog";
 
 export default async function ExpensesPage() {
   const expenses = await getExpenses();
@@ -20,15 +20,13 @@ export default async function ExpensesPage() {
           <h1 className="text-xl font-semibold tracking-tight">Expense Manager</h1>
           <p className="text-sm text-muted-foreground">Where the agency&apos;s money goes, by category and month.</p>
         </div>
-        <Button size="sm">
-          <Plus className="h-4 w-4" /> Log Expense
-        </Button>
+        <NewExpenseDialog />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Total This Period" value={formatCurrency(total)} icon={TrendingDown} />
         <StatCard label="Categories" value={String(categories)} icon={Layers} />
-        <StatCard label="Largest Expense" value={formatCurrency(largest.amount)} icon={Calendar} />
+        <StatCard label="Largest Expense" value={formatCurrency(largest?.amount ?? 0)} icon={Calendar} />
       </div>
 
       <ExpenseChart expenses={expenses} />

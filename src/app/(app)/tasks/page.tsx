@@ -1,5 +1,3 @@
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TaskBoard } from "@/components/projects/task-board";
@@ -7,6 +5,8 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { formatDate } from "@/lib/utils";
 import type { TaskPriority } from "@/types";
 import { getAllTasks, getProjects } from "@/lib/data/projects";
+import { getTeamMembers } from "@/lib/data/team";
+import { NewTaskDialog } from "@/components/projects/new-task-dialog";
 
 const priorityVariant: Record<TaskPriority, "secondary" | "default" | "warning" | "destructive"> = {
   low: "secondary",
@@ -16,7 +16,7 @@ const priorityVariant: Record<TaskPriority, "secondary" | "default" | "warning" 
 };
 
 export default async function TasksPage() {
-  const [projectTasks, projects] = await Promise.all([getAllTasks(), getProjects()]);
+  const [projectTasks, projects, teamMembers] = await Promise.all([getAllTasks(), getProjects(), getTeamMembers()]);
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -24,9 +24,7 @@ export default async function TasksPage() {
           <h1 className="text-xl font-semibold tracking-tight">Tasks</h1>
           <p className="text-sm text-muted-foreground">Every task across every project, in one place.</p>
         </div>
-        <Button size="sm">
-          <Plus className="h-4 w-4" /> New Task
-        </Button>
+        <NewTaskDialog projects={projects} teamMembers={teamMembers} />
       </div>
 
       <Tabs defaultValue="board">

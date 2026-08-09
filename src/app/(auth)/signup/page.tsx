@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { signUp } from "@/lib/auth";
+import { signUp, confirmSignUp, resendConfirmationCode } from "@/lib/auth";
 
 const schema = z.object({
   name: z.string().min(2, "Enter your name"),
@@ -21,6 +22,11 @@ type FormValues = z.infer<typeof schema>;
 
 export default function SignupPage() {
   const router = useRouter();
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [pendingPassword, setPendingPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [confirming, setConfirming] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -29,9 +35,15 @@ export default function SignupPage() {
 
   async function onSubmit(values: FormValues) {
     try {
-      const session = await signUp(values.name, values.email, values.password);
+      const result = await signUp(values.name, values.email, values.password);
+      if (result.mode === "needs-confirmation") {
+        setPendingEmail(result.email);
+        setPendingPassword(values.password);
+        toast.success("Check your email for a 6-digit verification code.");
+        return;
+      }
       toast.success(
-        session.mode === "mock"
+        result.mode === "mock"
           ? "Demo mode: no AWS backend connected yet — account created with sample data."
           : "Account created"
       );
@@ -39,6 +51,55 @@ export default function SignupPage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not create account");
     }
+  }
+
+  async function onConfirm() {
+    if (!pendingEmail) return;
+    setConfirming(true);
+    try {
+      await confirmSignUp(pendingEmail, code, pendingPassword);
+      toast.success("Email verified — welcome to Ownova OS.");
+      router.push("/dashboard");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Invalid or expired code");
+    } finally {
+      setConfirming(false);
+    }
+  }
+
+  async function onResend() {
+    if (!pendingEmail) return;
+    try {
+      await resendConfirmationCode(pendingEmail);
+      toast.success("Code resent — check your email.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't resend code");
+    }
+  }
+
+  if (pendingEmail) {
+    return (
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <div>
+            <p className="text-sm font-medium">Verify your email</p>
+            <p className="text-sm text-muted-foreground">
+              We sent a 6-digit code to <span className="font-medium text-foreground">{pendingEmail}</span>.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="code">Verification code</Label>
+            <Input id="code" inputMode="numeric" maxLength={6} placeholder="123456" value={code} onChange={(e) => setCode(e.target.value)} />
+          </div>
+          <Button className="w-full" onClick={onConfirm} disabled={confirming || code.length < 6}>
+            {confirming ? "Verifying..." : "Verify and continue"}
+          </Button>
+          <button type="button" onClick={onResend} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
+            Didn&apos;t get a code? Resend
+          </button>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

@@ -3,13 +3,22 @@
 // Server Actions — the AWS SDK (Cognito) must run server-side, so the client-side
 // src/lib/auth.ts calls into these instead of talking to Cognito directly.
 
-import { cognitoSignIn, cognitoSignUp, adminConfirmSignUp, isCognitoConfigured, decodeIdToken } from "@/lib/aws/cognito";
+import {
+  cognitoSignIn,
+  cognitoSignUp,
+  confirmSignUp,
+  resendConfirmationCode,
+  isCognitoConfigured,
+  decodeIdToken,
+} from "@/lib/aws/cognito";
 import { upsertUserFromCognito } from "@/lib/data/users";
 import { setSessionCookie, clearSessionCookie } from "@/lib/session";
 
 export type AuthActionResult =
   | { mode: "cognito"; email: string; name: string; idToken: string; accessToken: string; refreshToken?: string }
   | { mode: "mock" };
+
+export type SignUpActionResult = AuthActionResult | { mode: "needs-confirmation"; email: string };
 
 export async function signInAction(email: string, password: string): Promise<AuthActionResult> {
   if (!isCognitoConfigured) {
@@ -43,15 +52,19 @@ export async function signOutAction() {
   await clearSessionCookie();
 }
 
-export async function signUpAction(name: string, email: string, password: string): Promise<AuthActionResult> {
+export async function signUpAction(name: string, email: string, password: string): Promise<SignUpActionResult> {
   if (!isCognitoConfigured) return { mode: "mock" };
 
   await cognitoSignUp(name, email, password);
-  // Phase 1 shortcut: auto-confirm instead of an email verification code screen.
-  // Remove this call and build a real "enter your code" step before shipping to real users.
-  await adminConfirmSignUp(email).catch(() => {
-    // If the IAM role can't auto-confirm, the user will need to confirm via the emailed code
-    // before their first sign-in — that's fine, just means signInAction will throw until then.
-  });
-  return signInAction(email, password);
+  // Real verification flow: Cognito emails the user a 6-digit code. The client shows a
+  // "check your email" step and calls confirmSignUpAction with that code before signing in.
+  return { mode: "needs-confirmation", email };
+}
+
+export async function confirmSignUpAction(email: string, code: string): Promise<void> {
+  await confirmSignUp(email, code);
+}
+
+export async function resendConfirmationCodeAction(email: string): Promise<void> {
+  await resendConfirmationCode(email);
 }
