@@ -46,10 +46,8 @@ export async function requireInternalTeam(): Promise<ServerSession> {
 export async function requireInternalPage(): Promise<ServerSession> {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  // Deliberately NOT redirected to /client-portal: that page is an internal preview which shows
-  // an arbitrary client's invoices and projects, so sending a real client there would expose
-  // another client's data. Until a per-client scoped portal exists, "client" accounts have no
-  // page they can safely see.
-  if (session.role === "client") redirect("/no-access");
+  // Clients belong in their own scoped portal, never in the internal workspace. /portal itself
+  // sends them to /no-access if no client is linked to their login.
+  if (session.role === "client") redirect("/portal");
   return session;
 }

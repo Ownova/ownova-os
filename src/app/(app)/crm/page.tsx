@@ -4,9 +4,11 @@ import { PipelineBoard } from "@/components/crm/pipeline-board";
 import { getClients } from "@/lib/data/clients";
 import { NewClientDialog } from "@/components/crm/new-client-dialog";
 import { requireInternalPage } from "@/lib/auth-guard";
+import { PortalAccessDialog } from "@/components/crm/portal-access-dialog";
 
 export default async function CRMPage() {
-  await requireInternalPage();
+  const session = await requireInternalPage();
+  const canManagePortal = ["admin", "ceo"].includes(session.role);
 
   const clients = await getClients();
   return (
@@ -16,7 +18,10 @@ export default async function CRMPage() {
           <h1 className="text-xl font-semibold tracking-tight">CRM</h1>
           <p className="text-sm text-muted-foreground">Leads, prospects, and clients across the full pipeline.</p>
         </div>
-        <NewClientDialog />
+        <div className="flex gap-2">
+          {canManagePortal && <PortalAccessDialog clients={clients} />}
+          <NewClientDialog />
+        </div>
       </div>
 
       <Tabs defaultValue="pipeline">

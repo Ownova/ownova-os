@@ -13,7 +13,6 @@ import {
   ListChecks,
   CalendarDays,
   FolderOpen,
-  Globe,
   BarChart3,
   Settings,
 } from "lucide-react";
@@ -32,7 +31,6 @@ const nav = [
   { href: "/tasks", label: "Tasks", icon: ListChecks },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/documents", label: "Documents", icon: FolderOpen },
-  { href: "/client-portal", label: "Client Portal", icon: Globe },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
