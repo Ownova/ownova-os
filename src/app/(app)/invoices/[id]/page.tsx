@@ -39,7 +39,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <Link href="/invoices" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to Invoices
         </Link>
-        <InvoiceDetailActions invoiceNumber={invoice.number} clientEmail={clientEmail} />
+        <InvoiceDetailActions invoiceId={invoice.id} invoiceNumber={invoice.number} />
       </div>
 
       <Card>

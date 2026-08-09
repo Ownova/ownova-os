@@ -8,10 +8,13 @@ import {
   type SqlParameter,
 } from "@aws-sdk/client-rds-data";
 
-// Note: Amplify Hosting reserves the "AWS_" env var prefix for its own internal use, so the
-// region/access key/secret key are read from APP_AWS_* names instead (set in Amplify console
-// or .env.local) and passed explicitly to the SDK client, since the default credential chain
-// only looks for the reserved AWS_* names.
+// Amplify Hosting reserves the "AWS_" env var prefix, so config is read from APP_AWS_* names.
+//
+// Credentials are intentionally optional. In production there are none: the SSR compute role
+// (ownova-os-amplify-compute) provides temporary, automatically-rotated credentials through the
+// SDK's default chain, scoped to just this cluster, its secret, the documents bucket, and the
+// user pool. Static keys are only used for local development via .env.local — if they're absent,
+// the client falls through to the default chain rather than failing.
 const region = process.env.APP_AWS_REGION;
 const accessKeyId = process.env.APP_AWS_ACCESS_KEY_ID;
 const secretAccessKey = process.env.APP_AWS_SECRET_ACCESS_KEY;

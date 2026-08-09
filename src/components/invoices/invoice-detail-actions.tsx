@@ -1,18 +1,31 @@
 "use client";
 
-import { Printer, Send } from "lucide-react";
+import { FileDown, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-// Split out from the (now server-side) invoice detail page since window.print() and the toast
-// call need to run in the browser — everything else on that page can render server-side.
-export function InvoiceDetailActions({ invoiceNumber, clientEmail }: { invoiceNumber: string; clientEmail?: string }) {
+/**
+ * "Export PDF" downloads a real server-generated PDF from /api/invoices/[id]/pdf (previously this
+ * called window.print(), which produced a screenshot of the page rather than a document).
+ *
+ * "Send to Client" is deliberately honest about not being wired up: it used to show a success
+ * toast claiming the invoice had been emailed, which was untrue -- no mail transport is
+ * configured. It now says so plainly instead.
+ */
+export function InvoiceDetailActions({ invoiceId, invoiceNumber }: { invoiceId: string; invoiceNumber: string }) {
   return (
     <div className="flex gap-2">
-      <Button variant="outline" size="sm" onClick={() => window.print()}>
-        <Printer className="h-3.5 w-3.5" /> Export PDF
+      <Button variant="outline" size="sm" asChild>
+        <a href={`/api/invoices/${invoiceId}/pdf`} download={`${invoiceNumber}.pdf`}>
+          <FileDown className="h-3.5 w-3.5" /> Export PDF
+        </a>
       </Button>
-      <Button size="sm" onClick={() => toast.success(`Emailed ${invoiceNumber} to ${clientEmail ?? "client"}`)}>
+      <Button
+        size="sm"
+        onClick={() =>
+          toast.info("Email delivery isn't set up yet — download the PDF and send it manually for now.")
+        }
+      >
         <Send className="h-3.5 w-3.5" /> Send to Client
       </Button>
     </div>

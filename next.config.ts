@@ -16,10 +16,13 @@ const nextConfig: NextConfig = {
   // so each one is coalesced. An empty string is falsy, which is exactly what the
   // isAwsDbConfigured / isCognitoConfigured guards already check for -- so a genuinely missing
   // variable still cleanly degrades to mock mode instead of crashing.
+  //
+  // Note there are no AWS credentials here. In production the SSR compute role
+  // (ownova-os-amplify-compute) supplies them via the SDK's default credential chain; locally
+  // they come from .env.local or an AWS profile. Static keys are deliberately never baked into
+  // the build output.
   env: {
     APP_AWS_REGION: process.env.APP_AWS_REGION ?? "",
-    APP_AWS_ACCESS_KEY_ID: process.env.APP_AWS_ACCESS_KEY_ID ?? "",
-    APP_AWS_SECRET_ACCESS_KEY: process.env.APP_AWS_SECRET_ACCESS_KEY ?? "",
     COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID ?? "",
     COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID ?? "",
     DB_CLUSTER_ARN: process.env.DB_CLUSTER_ARN ?? "",

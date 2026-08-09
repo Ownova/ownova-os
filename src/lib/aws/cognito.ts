@@ -7,7 +7,9 @@ import {
   GlobalSignOutCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 
-// Amplify Hosting reserves the "AWS_" prefix, so region/keys are read from APP_AWS_* instead.
+// Amplify Hosting reserves the "AWS_" prefix, so config is read from APP_AWS_* instead.
+// Credentials are optional: production uses the SSR compute role via the default credential
+// chain, and APP_AWS_* keys exist only for local development (see lib/aws/db.ts).
 const region = process.env.APP_AWS_REGION;
 const accessKeyId = process.env.APP_AWS_ACCESS_KEY_ID;
 const secretAccessKey = process.env.APP_AWS_SECRET_ACCESS_KEY;

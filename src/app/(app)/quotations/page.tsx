@@ -24,8 +24,10 @@ export default async function QuotationsPage() {
           <h1 className="text-xl font-semibold tracking-tight">Quotations</h1>
           <p className="text-sm text-muted-foreground">Proposals sent, accepted, and ready to convert into invoices.</p>
         </div>
-        <Button size="sm">
-          <Plus className="h-4 w-4" /> New Quotation
+        <Button size="sm" asChild>
+          <Link href="/quotations/new">
+            <Plus className="h-4 w-4" /> New Quotation
+          </Link>
         </Button>
       </div>
 

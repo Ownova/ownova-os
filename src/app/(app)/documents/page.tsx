@@ -1,9 +1,10 @@
-import { Upload, FileText, FolderOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { FileText, FolderOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
 import { getDocuments } from "@/lib/data/documents";
+import { UploadDocumentDialog } from "@/components/documents/upload-document-dialog";
+import { DocumentDownloadButton } from "@/components/documents/document-download-button";
 
 const folders = ["Contracts", "Invoices", "Quotations", "Brand Assets", "Client Files"] as const;
 
@@ -20,9 +21,7 @@ export default async function DocumentsPage() {
           <h1 className="text-xl font-semibold tracking-tight">Documents</h1>
           <p className="text-sm text-muted-foreground">Contracts, invoices, brand assets, and client files.</p>
         </div>
-        <Button size="sm">
-          <Upload className="h-4 w-4" /> Upload
-        </Button>
+        <UploadDocumentDialog />
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -61,6 +60,7 @@ export default async function DocumentsPage() {
             <div className="flex shrink-0 items-center gap-2">
               <Badge variant="secondary">{d.folder}</Badge>
               <Badge variant="outline">v{d.version}</Badge>
+              <DocumentDownloadButton documentId={d.id} fileName={d.name} />
             </div>
           </div>
         ))}

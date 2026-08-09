@@ -12,7 +12,7 @@ import {
   decodeIdToken,
 } from "@/lib/aws/cognito";
 import { upsertUserFromCognito } from "@/lib/data/users";
-import { setSessionCookie, clearSessionCookie } from "@/lib/session";
+import { setSessionCookie, setMockSessionCookie, clearSessionCookie } from "@/lib/session";
 
 export type AuthActionResult =
   | { mode: "cognito"; email: string; name: string; idToken: string; accessToken: string; refreshToken?: string }
@@ -24,7 +24,7 @@ export async function signInAction(email: string, password: string): Promise<Aut
   if (!isCognitoConfigured) {
     // Mock/demo mode: no real identity, but still set a server session (role "admin") so
     // role-gated UI like the Team page's role editor is visible while developing without AWS.
-    await setSessionCookie({ sub: "mock-user", email, name: email.split("@")[0], role: "admin", mode: "mock" });
+    await setMockSessionCookie({ sub: "mock-user", email, name: email.split("@")[0], role: "admin" });
     return { mode: "mock" };
   }
 
@@ -34,9 +34,12 @@ export async function signInAction(email: string, password: string): Promise<Aut
 
   // Keep our `users` table in sync with Cognito on every sign-in — cheap upsert, and it means
   // there's never a chance of a dangling Cognito identity with no corresponding app-side row.
-  const role = await upsertUserFromCognito({ id: claims.sub, email: claims.email ?? email, name }).catch(() => "developer");
+  // This must run before the cookie is set: getServerSession reads the role from this row.
+  await upsertUserFromCognito({ id: claims.sub, email: claims.email ?? email, name }).catch(() => "developer");
 
-  await setSessionCookie({ sub: claims.sub, email: claims.email ?? email, name, role, mode: "cognito" });
+  // Store the raw ID token — getServerSession verifies its signature against the pool's JWKS on
+  // every read, so nothing here is taken on trust.
+  await setSessionCookie(tokens.idToken);
 
   return {
     mode: "cognito",

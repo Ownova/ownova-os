@@ -37,6 +37,18 @@ export async function upsertUserFromCognito(params: { id: string; email: string;
   return rows[0]?.role ?? "developer";
 }
 
+/**
+ * Looks up the authoritative role for a Cognito sub. Called on every authenticated request via
+ * getServerSession, so it stays a single indexed primary-key lookup. Falls back to the least
+ * privileged internal role when the row is missing (e.g. verified token, but the upsert hasn't
+ * run yet) rather than assuming elevated access.
+ */
+export async function getUserRole(userId: string): Promise<string> {
+  if (!isAwsDbConfigured) return "admin";
+  const rows = await query<{ role: string }>(`select role from users where id = :userId`, { userId });
+  return rows[0]?.role ?? "developer";
+}
+
 export async function updateUserRole(userId: string, role: string) {
   if (!isAwsDbConfigured) return;
   await query(`update users set role = :role where id = :userId`, { role, userId });
