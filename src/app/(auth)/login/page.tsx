@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { signIn } from "@/lib/auth";
+import { describeActionError } from "@/lib/action-error";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -36,7 +37,7 @@ export default function LoginPage() {
       );
       router.push("/dashboard");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not sign in");
+      toast.error(describeActionError(e, "Could not sign in"));
     }
   }
 

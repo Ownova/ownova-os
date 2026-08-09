@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
 import { createPaymentAction } from "@/app/actions/expenses";
 import type { Invoice } from "@/types";
+import { describeActionError } from "@/lib/action-error";
 
 const methods = ["bank_transfer", "stripe", "paypal", "wise", "payoneer", "cash"];
 const statuses = ["paid", "pending", "partial", "refunded", "overdue"];
@@ -36,7 +37,7 @@ export function NewPaymentDialog({ invoices }: { invoices: Invoice[] }) {
       setOpen(false);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't log payment");
+      toast.error(describeActionError(err, "Couldn't log payment"));
     } finally {
       setSubmitting(false);
     }

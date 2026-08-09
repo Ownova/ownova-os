@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
 import { createTaskAction } from "@/app/actions/projects";
 import type { Project, TeamMember } from "@/types";
+import { describeActionError } from "@/lib/action-error";
 
 const priorities = ["low", "medium", "high", "urgent"];
 
@@ -35,7 +36,7 @@ export function NewTaskDialog({ projects, teamMembers }: { projects: Project[]; 
       setOpen(false);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't create task");
+      toast.error(describeActionError(err, "Couldn't create task"));
     } finally {
       setSubmitting(false);
     }

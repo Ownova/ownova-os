@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
+import { describeActionError } from "@/lib/action-error";
 import { createInvoiceAction } from "@/app/actions/invoices";
 import type { Client } from "@/types";
 
@@ -64,9 +65,15 @@ export function InvoiceForm({ clients }: { clients: Client[] }) {
   }, 0);
 
   async function onSubmit(values: FormValues) {
-    const result = await createInvoiceAction(values);
-    toast.success(`${result.number} created for ${formatCurrency(result.total, values.currency)}`);
-    router.push("/invoices");
+    // Previously unguarded: if the action failed, the rejection went unhandled and the user got
+    // no feedback at all -- the button simply stopped spinning.
+    try {
+      const result = await createInvoiceAction(values);
+      toast.success(`${result.number} created for ${formatCurrency(result.total, values.currency)}`);
+      router.push("/invoices");
+    } catch (error) {
+      toast.error(describeActionError(error, "Could not create this invoice."));
+    }
   }
 
   // An invoice must be addressed to a client. Rendering the form with an empty client dropdown

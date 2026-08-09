@@ -12,11 +12,20 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { signUp, confirmSignUp, resendConfirmationCode } from "@/lib/auth";
+import { describeActionError } from "@/lib/action-error";
 
+// Mirrors the Cognito user pool's password policy exactly. Previously this only required 6
+// characters, so a valid-looking password was accepted by the form and then rejected by Cognito
+// after submission — the rules belong in front of the user, not behind the request.
 const schema = z.object({
   name: z.string().min(2, "Enter your name"),
   email: z.string().email("Enter a valid email"),
-  password: z.string().min(6, "At least 6 characters"),
+  password: z
+    .string()
+    .min(8, "At least 8 characters")
+    .regex(/[A-Z]/, "Include at least one uppercase letter")
+    .regex(/[a-z]/, "Include at least one lowercase letter")
+    .regex(/[0-9]/, "Include at least one number"),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -49,7 +58,7 @@ export default function SignupPage() {
       );
       router.push("/dashboard");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not create account");
+      toast.error(describeActionError(e, "Could not create account"));
     }
   }
 
@@ -61,7 +70,7 @@ export default function SignupPage() {
       toast.success("Email verified — welcome to Ownova OS.");
       router.push("/dashboard");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Invalid or expired code");
+      toast.error(describeActionError(e, "Invalid or expired code"));
     } finally {
       setConfirming(false);
     }
@@ -73,7 +82,7 @@ export default function SignupPage() {
       await resendConfirmationCode(pendingEmail);
       toast.success("Code resent — check your email.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't resend code");
+      toast.error(describeActionError(e, "Couldn't resend code"));
     }
   }
 
@@ -119,7 +128,13 @@ export default function SignupPage() {
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" placeholder="••••••••" {...register("password")} />
-            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+            {errors.password ? (
+              <p className="text-xs text-destructive">{errors.password.message}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                At least 8 characters, with an uppercase letter, a lowercase letter, and a number.
+              </p>
+            )}
           </div>
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? "Creating account..." : "Create account"}

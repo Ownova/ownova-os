@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { prepareDocumentUploadAction, recordDocumentAction } from "@/app/actions/documents";
+import { describeActionError } from "@/lib/action-error";
 
 const FOLDERS = ["Contracts", "Invoices", "Quotations", "Brand Assets", "Client Files"];
 
@@ -59,7 +60,7 @@ export function UploadDocumentDialog() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed.");
+      toast.error(describeActionError(error, "Upload failed."));
     } finally {
       setIsUploading(false);
     }

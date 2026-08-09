@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { createProjectAction } from "@/app/actions/projects";
 import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
 import type { Client } from "@/types";
+import { describeActionError } from "@/lib/action-error";
 
 export function NewProjectDialog({ clients }: { clients: Client[] }) {
   const router = useRouter();
@@ -34,7 +35,7 @@ export function NewProjectDialog({ clients }: { clients: Client[] }) {
       setOpen(false);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't create project");
+      toast.error(describeActionError(err, "Couldn't create project"));
     } finally {
       setSubmitting(false);
     }
