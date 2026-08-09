@@ -8,6 +8,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
 import { createPaymentAction } from "@/app/actions/expenses";
 import type { Invoice } from "@/types";
 
@@ -52,6 +53,13 @@ export function NewPaymentDialog({ invoices }: { invoices: Invoice[] }) {
         <DialogHeader>
           <DialogTitle>Log Payment</DialogTitle>
         </DialogHeader>
+        {invoices.length === 0 ? (
+          <EmptyPrerequisite
+            message="A payment has to be logged against an invoice, and there aren't any yet."
+            actionLabel="Create an invoice first"
+            actionHref="/invoices/new"
+          />
+        ) : (
         <form onSubmit={onSubmit} className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="invoiceId">Invoice</Label>
@@ -94,6 +102,7 @@ export function NewPaymentDialog({ invoices }: { invoices: Invoice[] }) {
             {submitting ? "Logging..." : "Log Payment"}
           </Button>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

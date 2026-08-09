@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
+import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
 import { createQuotationAction } from "@/app/actions/quotations";
 import type { Client } from "@/types";
 
@@ -70,6 +71,17 @@ export function QuotationForm({ clients }: { clients: Client[] }) {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not create this quotation.");
     }
+  }
+
+  // Same reasoning as InvoiceForm: no clients means the form can never be submitted.
+  if (clients.length === 0) {
+    return (
+      <EmptyPrerequisite
+        message="A quotation has to be addressed to a client, and there aren't any clients yet."
+        actionLabel="Add a client first"
+        actionHref="/crm"
+      />
+    );
   }
 
   return (

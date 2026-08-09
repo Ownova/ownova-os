@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
+import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
 import { createInvoiceAction } from "@/app/actions/invoices";
 import type { Client } from "@/types";
 
@@ -66,6 +67,18 @@ export function InvoiceForm({ clients }: { clients: Client[] }) {
     const result = await createInvoiceAction(values);
     toast.success(`${result.number} created for ${formatCurrency(result.total, values.currency)}`);
     router.push("/invoices");
+  }
+
+  // An invoice must be addressed to a client. Rendering the form with an empty client dropdown
+  // would let someone fill in every line item before discovering they can't submit.
+  if (clients.length === 0) {
+    return (
+      <EmptyPrerequisite
+        message="An invoice has to be addressed to a client, and there aren't any clients yet."
+        actionLabel="Add a client first"
+        actionHref="/crm"
+      />
+    );
   }
 
   return (

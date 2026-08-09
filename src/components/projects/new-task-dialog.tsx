@@ -8,6 +8,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
 import { createTaskAction } from "@/app/actions/projects";
 import type { Project, TeamMember } from "@/types";
 
@@ -51,6 +52,13 @@ export function NewTaskDialog({ projects, teamMembers }: { projects: Project[]; 
         <DialogHeader>
           <DialogTitle>New Task</DialogTitle>
         </DialogHeader>
+        {projects.length === 0 ? (
+          <EmptyPrerequisite
+            message="Tasks live inside a project, and there aren't any projects yet."
+            actionLabel="Create a project first"
+            actionHref="/projects"
+          />
+        ) : (
         <form onSubmit={onSubmit} className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="projectId">Project</Label>
@@ -92,6 +100,7 @@ export function NewTaskDialog({ projects, teamMembers }: { projects: Project[]; 
             {submitting ? "Creating..." : "Create Task"}
           </Button>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

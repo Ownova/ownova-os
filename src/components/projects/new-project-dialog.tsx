@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createProjectAction } from "@/app/actions/projects";
+import { EmptyPrerequisite } from "@/components/ui/empty-prerequisite";
 import type { Client } from "@/types";
 
 export function NewProjectDialog({ clients }: { clients: Client[] }) {
@@ -50,6 +51,13 @@ export function NewProjectDialog({ clients }: { clients: Client[] }) {
         <DialogHeader>
           <DialogTitle>New Project</DialogTitle>
         </DialogHeader>
+        {clients.length === 0 ? (
+          <EmptyPrerequisite
+            message="Every project belongs to a client, and there aren't any clients yet."
+            actionLabel="Add a client first"
+            actionHref="/crm"
+          />
+        ) : (
         <form onSubmit={onSubmit} className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="clientId">Client</Label>
@@ -82,6 +90,7 @@ export function NewProjectDialog({ clients }: { clients: Client[] }) {
             {submitting ? "Creating..." : "Create Project"}
           </Button>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );
