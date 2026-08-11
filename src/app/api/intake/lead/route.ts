@@ -17,6 +17,26 @@ export const dynamic = "force-dynamic";
  */
 const MAX_BODY_BYTES = 64 * 1024;
 
+/**
+ * CORS, because the Google Maps extractor runs in the browser console on google.com and posts
+ * here cross-origin. Without an OPTIONS handler the preflight fails and every request dies as an
+ * opaque "Failed to fetch" — which is exactly what happened the first time it was run for real.
+ *
+ * This does not weaken the endpoint. CORS is a browser-enforced policy; curl and every server-side
+ * client have always ignored it entirely. The actual gate is the shared secret, and that is
+ * unchanged. Allowing the browser to do what a shell one-liner could already do costs nothing.
+ */
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, x-ownova-secret",
+  "Access-Control-Max-Age": "86400",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 function pick(body: Record<string, unknown>, ...keys: string[]): string | null {
   for (const key of keys) {
     const direct = body[key];
@@ -38,25 +58,25 @@ export async function POST(request: Request) {
     // Logged for us, opaque to the caller: an attacker shouldn't learn whether the secret was
     // missing, malformed, or simply wrong.
     console.warn("[intake/lead] rejected:", auth.reason);
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: CORS_HEADERS });
   }
 
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) {
-    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+    return NextResponse.json({ error: "Payload too large" }, { status: 413, headers: CORS_HEADERS });
   }
 
   let body: Record<string, unknown>;
   try {
     body = JSON.parse(raw) as Record<string, unknown>;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: CORS_HEADERS });
   }
 
   const email = pick(body, "email", "emailaddress");
   const name = pick(body, "name", "fullname") ?? email;
   if (!name) {
-    return NextResponse.json({ error: "A name or email is required" }, { status: 422 });
+    return NextResponse.json({ error: "A name or email is required" }, { status: 422, headers: CORS_HEADERS });
   }
 
   // Without an external id there is no way to tell a retry from a genuine second submission, so
@@ -81,20 +101,18 @@ export async function POST(request: Request) {
     });
 
     if (!result) {
-      return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+      return NextResponse.json({ error: "Database not configured" }, { status: 503, headers: CORS_HEADERS });
     }
 
-    return NextResponse.json({
-      ok: true,
-      clientId: result.clientId,
-      created: result.created,
-      duplicate: !result.created,
-    });
+    return NextResponse.json(
+      { ok: true, clientId: result.clientId, created: result.created, duplicate: !result.created },
+      { headers: CORS_HEADERS }
+    );
   } catch (error) {
     // A 500 makes Apps Script retry, which is what we want for a transient Aurora resume. The
     // replay check in ingestLead is what makes that retry safe.
     console.error("[intake/lead] failed:", error);
-    return NextResponse.json({ error: "Intake failed" }, { status: 500 });
+    return NextResponse.json({ error: "Intake failed" }, { status: 500, headers: CORS_HEADERS });
   }
 }
 
