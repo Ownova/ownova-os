@@ -38,12 +38,26 @@ export async function OPTIONS() {
 }
 
 function pick(body: Record<string, unknown>, ...keys: string[]): string | null {
+  // An explicitly-provided key wins outright — even when its value is null.
+  //
+  // This guard exists because the loose fallback below caused a real corruption. The Maps
+  // scraper sends `website: null` for a business that genuinely has no website, alongside a
+  // human-readable field `"Has website": "NO - strong signal"`. The fallback matched that second
+  // key (normalised "haswebsite" *contains* "website") and wrote the words "NO - strong signal"
+  // into the website column — making a lead with no site look like it had one, and destroying
+  // the single most valuable signal the scraper produces.
+  //
+  // `website: null` from a caller that knows the answer is a finding, not a gap to be guessed at.
   for (const key of keys) {
-    const direct = body[key];
-    if (typeof direct === "string" && direct.trim()) return direct.trim();
+    if (key in body) {
+      const direct = body[key];
+      return typeof direct === "string" && direct.trim() ? direct.trim() : null;
+    }
   }
-  // Fall back to a loose match on the question text, so "What's your company name?" still finds
-  // the company field.
+
+  // Only now fall back to loose matching on question text, so Google Forms' "What's your company
+  // name?" still finds the company field. This runs solely when the caller supplied no explicit
+  // key at all, which is the Forms case and never the scraper case.
   const entries = Object.entries(body).filter(([, v]) => typeof v === "string" && v.trim());
   for (const key of keys) {
     const hit = entries.find(([k]) => k.toLowerCase().replace(/[^a-z]/g, "").includes(key.toLowerCase()));
