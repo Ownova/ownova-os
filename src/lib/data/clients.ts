@@ -27,6 +27,8 @@ interface ClientRow {
   country: string | null;
   source: string | null;
   website: string | null;
+  address: string | null;
+  industry: string | null;
 }
 
 function rowToClient(row: ClientRow): Client {
@@ -45,6 +47,8 @@ function rowToClient(row: ClientRow): Client {
     country: row.country ?? undefined,
     source: row.source ?? undefined,
     website: row.website ?? undefined,
+    address: row.address ?? undefined,
+    industry: row.industry ?? undefined,
   };
 }
 
@@ -53,6 +57,7 @@ export async function getClientById(id: string): Promise<Client | undefined> {
   const rows = await query<ClientRow>(
     `select c.id, c.name, c.email, c.phone, c.stage, c.value, c.tags,
             c.last_activity_at, c.created_at, c.country, c.source, c.website,
+            c.address, c.industry,
             comp.name as company_name,
             u.full_name as owner_name
      from clients c
@@ -70,6 +75,7 @@ export async function getClients(): Promise<Client[]> {
   const rows = await query<ClientRow>(
     `select c.id, c.name, c.email, c.phone, c.stage, c.value, c.tags,
             c.last_activity_at, c.created_at, c.country, c.source, c.website,
+            c.address, c.industry,
             comp.name as company_name,
             u.full_name as owner_name
      from clients c
@@ -78,4 +84,37 @@ export async function getClients(): Promise<Client[]> {
      order by c.created_at desc`
   );
   return rows.map(rowToClient);
+}
+
+export interface ClientNote {
+  id: string;
+  body: string;
+  author: string;
+  createdAt: string;
+}
+
+/**
+ * Notes on a client, newest first.
+ *
+ * This is where the scraper's business brief lives, and where every "called them, no answer"
+ * ends up. Without a screen that reads this table the briefs are invisible — which is exactly
+ * what happened when leads were first imported.
+ */
+export async function getClientNotes(clientId: string): Promise<ClientNote[]> {
+  if (!isAwsDbConfigured) return [];
+  const rows = await query<{ id: string; body: string; created_at: string; author_name: string | null }>(
+    `select n.id, n.body, n.created_at, u.full_name as author_name
+     from client_notes n
+     left join users u on u.id = n.author_id
+     where n.client_id = :clientId
+     order by n.created_at desc`,
+    { clientId }
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    body: r.body,
+    // Scraped and form-imported notes have no author — they weren't written by a person.
+    author: r.author_name ?? "Imported",
+    createdAt: r.created_at,
+  }));
 }

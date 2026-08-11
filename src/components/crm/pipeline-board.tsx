@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatCurrency, initials } from "@/lib/utils";
 import { OutreachBadge } from "@/components/crm/outreach-badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -27,7 +28,11 @@ export function PipelineBoard({ clients }: { clients: Client[] }) {
             </div>
             <div className="space-y-2">
               {items.map((c) => (
-                <div key={c.id} className="rounded-lg border border-border/70 bg-card p-3 shadow-sm">
+                <Link
+                  key={c.id}
+                  href={`/crm/${c.id}`}
+                  className="block rounded-lg border border-border/70 bg-card p-3 shadow-sm transition hover:border-primary/50 hover:bg-accent/40"
+                >
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="text-[10px]">{initials(c.name)}</AvatarFallback>
@@ -43,7 +48,7 @@ export function PipelineBoard({ clients }: { clients: Client[] }) {
                         showing a red "no cold email" badge on an existing client would be noise. */}
                     {c.source === "google_maps" && <OutreachBadge country={c.country} />}
                   </div>
-                </div>
+                </Link>
               ))}
               {items.length === 0 && (
                 <p className="px-1 py-4 text-center text-xs text-muted-foreground">No clients</p>

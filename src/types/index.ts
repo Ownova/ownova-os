@@ -43,6 +43,8 @@ export interface Client {
   /** Where the lead came from: google_form, cal_booking, google_maps, manual. */
   source?: string;
   website?: string;
+  address?: string;
+  industry?: string;
 }
 
 export type ProjectStatus = "planning" | "in_progress" | "review" | "completed" | "on_hold";

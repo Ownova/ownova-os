@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   useReactTable,
   getCoreRowModel,
@@ -35,15 +36,15 @@ const columns = [
     cell: (info) => {
       const c = info.row.original;
       return (
-        <div className="flex items-center gap-2.5">
+        <Link href={`/crm/${c.id}`} className="flex items-center gap-2.5 hover:opacity-80">
           <Avatar>
             <AvatarFallback>{initials(c.name)}</AvatarFallback>
           </Avatar>
           <div>
-            <p className="text-sm font-medium leading-none">{c.name}</p>
+            <p className="text-sm font-medium leading-none text-primary">{c.name}</p>
             <p className="text-xs text-muted-foreground">{c.company}</p>
           </div>
-        </div>
+        </Link>
       );
     },
   }),
